@@ -11,32 +11,29 @@ pipeline {
         DOCKER_REPO = "beny14/kube_repo"
     }
 
-    agent {
-        docker {
-            image 'beny14/dockerfile_agent:latest'
-            args '--user root -v /var/run/docker.sock:/var/run/docker.sock'
-        }
-    }
+    agent any // Use any agent for the pipeline
 
     stages {
         stage('Build') {
             steps {
-                withCredentials([usernamePassword(credentialsId: 'dockerhub_key', usernameVariable: 'USERNAME', passwordVariable: 'USERPASS')]) {
-                    script {
-                        try {
-                            echo "Starting Docker build"
-                            sh """
-                                echo ${USERPASS} | docker login -u ${USERNAME} --password-stdin
-                                docker build -t ${DOCKER_REPO}:${BUILD_NUMBER} .
-                                docker tag ${DOCKER_REPO}:${BUILD_NUMBER} ${DOCKER_REPO}:latest
-                                docker push ${DOCKER_REPO}:${BUILD_NUMBER}
-                                docker push ${DOCKER_REPO}:latest
-                            """
+                script {
+                    docker.image('beny14/dockerfile_agent:latest').inside('--user root -v /var/run/docker.sock:/var/run/docker.sock') {
+                        withCredentials([usernamePassword(credentialsId: 'dockerhub_key', usernameVariable: 'USERNAME', passwordVariable: 'USERPASS')]) {
+                            try {
+                                echo "Starting Docker build"
+                                sh """
+                                    echo ${USERPASS} | docker login -u ${USERNAME} --password-stdin
+                                    docker build -t ${DOCKER_REPO}:${BUILD_NUMBER} .
+                                    docker tag ${DOCKER_REPO}:${BUILD_NUMBER} ${DOCKER_REPO}:latest
+                                    docker push ${DOCKER_REPO}:${BUILD_NUMBER}
+                                    docker push ${DOCKER_REPO}:latest
+                                """
 
-                            foo() // Call shared library function
-                            echo "Docker build and push completed"
-                        } catch (Exception e) {
-                            error "Build failed: ${e.getMessage()}"
+                                foo() // Call shared library function
+                                echo "Docker build and push completed"
+                            } catch (Exception e) {
+                                error "Build failed: ${e.getMessage()}"
+                            }
                         }
                     }
                 }
