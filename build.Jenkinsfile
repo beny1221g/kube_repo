@@ -31,10 +31,8 @@ pipeline {
                                 docker tag ${DOCKER_REPO}:${BUILD_NUMBER} ${DOCKER_REPO}:latest
                                 docker push ${DOCKER_REPO}:${BUILD_NUMBER}
                                 docker push ${DOCKER_REPO}:latest
-
                             """
-
-                            foo()//shared lib
+                            foo() // Call shared library function
                             echo "Docker build and push completed"
                         } catch (Exception e) {
                             error "Build failed: ${e.getMessage()}"
@@ -43,7 +41,7 @@ pipeline {
                 }
             }
         }
-        }
+    } // <-- This was missing
 
     post {
         always {
