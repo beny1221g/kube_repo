@@ -3,7 +3,7 @@ pipeline {
         buildDiscarder(logRotator(daysToKeepStr: '14'))
         disableConcurrentBuilds()
         timestamps()
-        timeout(time: 40, unit: 'MINUTES') // Set a global timeout for the pipeline
+        timeout(time: 40, unit: 'MINUTES')
     }
 
     environment {
@@ -11,36 +11,33 @@ pipeline {
         DOCKER_REPO = "beny14/kube_repo"
     }
 
-    agent {
-        docker {
-            image 'beny14/dockerfile_agent:latest'
-            args '--user root -v /var/run/docker.sock:/var/run/docker.sock'
-        }
-    }
+    agent any
 
     stages {
         stage('Build') {
             steps {
-                withCredentials([usernamePassword(credentialsId: 'dockerhub_key', usernameVariable: 'USERNAME', passwordVariable: 'USERPASS')]) {
-                    script {
-                        try {
-                            echo "Starting Docker build"
-                            sh """
-                                echo ${USERPASS} | docker login -u ${USERNAME} --password-stdin
-                                docker build -t ${DOCKER_REPO}:${BUILD_NUMBER} .
-                                docker tag ${DOCKER_REPO}:${BUILD_NUMBER} ${DOCKER_REPO}:latest
-                                docker push ${DOCKER_REPO}:${BUILD_NUMBER}
-                                docker push ${DOCKER_REPO}:latest
-                            """
-                            echo "Docker  build and push completed"
-                        } catch (Exception e) {
-                            error "Build failed: ${e.getMessage()}"
+                script {
+                    docker.image('beny14/dockerfile_agent:latest').inside('--user root -v /var/run/docker.sock:/var/run/docker.sock') {
+                        withCredentials([usernamePassword(credentialsId: 'dockerhub_key', usernameVariable: 'USERNAME', passwordVariable: 'USERPASS')]) {
+                            try {
+                                echo "Starting Docker build"
+                                sh """
+                                    echo ${USERPASS} | docker login -u ${USERNAME} --password-stdin
+                                    docker build -t ${DOCKER_REPO}:${BUILD_NUMBER} .
+                                    docker tag ${DOCKER_REPO}:${BUILD_NUMBER} ${DOCKER_REPO}:latest
+                                    docker push ${DOCKER_REPO}:${BUILD_NUMBER}
+                                    docker push ${DOCKER_REPO}:latest
+                                """
+                                echo "Docker build and push completed"
+                            } catch (Exception e) {
+                                error "Build failed: ${e.getMessage()}"
+                            }
                         }
                     }
                 }
             }
         }
-    } // <-- This was missing
+    }
 
     post {
         always {
