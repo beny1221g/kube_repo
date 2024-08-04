@@ -65,7 +65,7 @@ pipeline {
         failure {
             script {
                 def errorMessage = currentBuild.result == 'FAILURE' ? currentBuild.description : 'Build failed'
-                echo "Error occurred : ${errorMessage}"
+                echo "Error occurred: ${errorMessage}"
             }
         }
     }
