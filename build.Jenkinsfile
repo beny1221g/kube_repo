@@ -7,9 +7,8 @@ pipeline {
     }
 
     environment {
-        IMG_NAME = "kube_repo:${BUILD_NUMBER}"
-        DOCKER_REPO = "beny14/kube_repo"
-    }
+          DOCKER_REPO = "beny14/kube_repo"
+               }
 
     agent {
         docker {
