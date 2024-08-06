@@ -2,7 +2,7 @@ services:
   app:
     build:
       context: ./polybot
-      dockerfile: NGINX/Dockerfile
+      dockerfile: Dockerfile
     ports:
       - "5000:5000"
     volumes:

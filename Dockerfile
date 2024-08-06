@@ -2,10 +2,10 @@
 FROM nginx:stable-perl
 
 # Copy the Nginx configuration file into the container
-COPY nginx.conf /etc/nginx/nginx.conf
+COPY ./NGINX/nginx.conf /etc/nginx/nginx.conf
 
 # Copy the static website files into the container
-COPY .. /usr/share/nginx/html
+COPY ./NGINX/Pages/index.html /usr/share/nginx/html
 
 # Expose the port that Nginx will run on
 EXPOSE 8002
