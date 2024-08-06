@@ -9,7 +9,6 @@ pipeline {
     environment {
         IMG_NAME = "kube_repo:${BUILD_NUMBER}"
         DOCKER_REPO = "beny14/kube_repo"
-
     }
 
     agent {
@@ -32,10 +31,8 @@ pipeline {
                                 docker tag ${DOCKER_REPO}:${BUILD_NUMBER} ${DOCKER_REPO}:latest
                                 docker push ${DOCKER_REPO}:${BUILD_NUMBER}
                                 docker push ${DOCKER_REPO}:latest
-
                             """
 
-//                             foo()//shared lib
                             echo "Docker build and push completed"
                         } catch (Exception e) {
                             error "Build failed: ${e.getMessage()}"
@@ -44,10 +41,6 @@ pipeline {
                 }
             }
         }
-
-
-
-
     }
 
     post {
