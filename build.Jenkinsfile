@@ -1,5 +1,3 @@
-@Library('shared-lib') _
-
 pipeline {
     options {
         buildDiscarder(logRotator(daysToKeepStr: '14'))
