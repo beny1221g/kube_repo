@@ -7,8 +7,8 @@ pipeline {
     }
 
     environment {
-          DOCKER_REPO = "beny14/kube_repo"
-               }
+        DOCKER_REPO = "beny14/kube_repo"
+    }
 
     agent {
         docker {
@@ -31,7 +31,6 @@ pipeline {
                                 docker push ${DOCKER_REPO}:${BUILD_NUMBER}
                                 docker push ${DOCKER_REPO}:latest
                             """
-
                             echo "Docker build and push completed"
                         } catch (Exception e) {
                             error "Build failed: ${e.getMessage()}"
@@ -46,17 +45,17 @@ pipeline {
         always {
             script {
                 echo "Cleaning up Docker containers and images"
-                def containerId = sh(script: "docker ps -q -f ancestor=${DOCKER_REPO}:${BUILD_NUMBER}", returnStdout: true).trim()
+                def containerId = sh(script: "docker ps -q -f ancestor=${env.DOCKER_REPO}:${BUILD_NUMBER}", returnStdout: true).trim()
 
                 sh """
-                    for id in \$(docker ps -a -q -f ancestor=${DOCKER_REPO}:${BUILD_NUMBER}); do
+                    for id in \$(docker ps -a -q -f ancestor=${env.DOCKER_REPO}:${BUILD_NUMBER}); do
                         if [ "\$id" != "${containerId}" ]; then
                             docker rm -f \$id || true
                         fi
                     done
                 """
                 sh """
-                    docker images --format '{{.Repository}}:{{.Tag}} {{.ID}}' | grep '${DOCKER_REPO}' | grep -v ':latest' | grep -v ':${BUILD_NUMBER}' | awk '{print \$2}' | xargs --no-run-if-empty docker rmi -f || true
+                    docker images --format '{{.Repository}}:{{.Tag}} {{.ID}}' | grep '${env.DOCKER_REPO}' | grep -v ':latest' | grep -v ':${BUILD_NUMBER}' | awk '{print \$2}' | xargs --no-run-if-empty docker rmi -f || true
                 """
                 cleanWs()
                 echo "Cleanup completed"
