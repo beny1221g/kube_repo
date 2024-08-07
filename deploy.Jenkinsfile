@@ -3,7 +3,7 @@ pipeline {
 
     parameters {
         string(name: 'IMAGE_NAME', defaultValue: 'beny14/polybot', description: 'Name of the Docker image')
-        string(name: 'BUILD_NUMBER', defaultValue: '', description: 'Build number of the Docker image to deploy')
+        string(name: 'BUILD_NUMBER', defaultValue: '', description: 'Build number of the Docker image to deploy ')
     }
 
     stages {
