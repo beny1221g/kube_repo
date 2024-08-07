@@ -1,11 +1,11 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: nginx-service
+  name: NGINX-service
   namespace: demo-app
 spec:
   selector:
-    app: nginx
+    app: NGINX
   ports:
   - protocol: TCP
     port: 80
