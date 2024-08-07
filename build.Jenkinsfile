@@ -68,6 +68,12 @@ pipeline {
                 }
             }
         }
+
+        stage('Archive Artifacts') {
+            steps {
+                archiveArtifacts artifacts: 'rmp/*.yaml', allowEmptyArchive: true
+            }
+        }
     }
 
     post {
