@@ -20,12 +20,12 @@ pipeline {
                     echo "Applying Kubernetes configurations"
 
                     // Apply deployments
-                    sh 'kubectl apply -f rmp/nginx-deployment.yaml -n demo-app'
-                    sh 'kubectl apply -f rmp/app-deployment.yaml -n demo-app'
+                    sh 'kubectl apply -f k8s/nginx-deployment.yaml -n demo-app'
+                    sh 'kubectl apply -f k8s/app-deployment.yaml -n demo-app'
 
                     // Apply services and ingress
-                    sh 'kubectl apply -f rmp/nginx-service.yaml -n demo-app'
-                    sh 'kubectl apply -f rmp/nginx-ingress.yaml -n demo-app'
+                    sh 'kubectl apply -f k8s/nginx-service.yaml -n demo-app'
+                    sh 'kubectl apply -f k8s/nginx-ingress.yaml -n demo-app'
 
                     echo "Kubernetes configurations applied"
                 }
