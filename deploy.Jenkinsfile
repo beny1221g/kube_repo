@@ -9,7 +9,7 @@ pipeline {
     stages {
         stage('Download Artifacts') {
             steps {
-                copyArtifacts(projectName: 'build_pipeline', filter: 'rmp/*.yaml', target: 'rmp')
+                copyArtifacts(projectName: 'app_build', filter: 'rmp/*.yaml', target: 'rmp')
             }
         }
 
