@@ -70,10 +70,10 @@ pipeline {
         }
 
         stage('Archive Artifacts') {
-            steps {
-                archiveArtifacts artifacts: 'rmp/*.yaml', allowEmptyArchive: true
-            }
-        }
+             steps {
+                  archiveArtifacts artifacts: 'k8s/*.yaml', allowEmptyArchive: true
+                   }
+                                   }
     }
 
     post {
