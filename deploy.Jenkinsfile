@@ -9,7 +9,7 @@ pipeline {
     stages {
         stage('Download Artifacts') {
             steps {
-                copyArtifacts(projectName: 'app_build', filter: 'k8s/*.yaml', target: 'rmp')
+                copyArtifacts(projectName: 'app_build', filter: 'k8s/*.yaml', target: 'k8s')
                   }
                                     }
 
