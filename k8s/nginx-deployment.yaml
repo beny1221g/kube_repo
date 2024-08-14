@@ -15,6 +15,6 @@ spec:
     spec:
       containers:
       - name: nginx
-        image: beny14/kube_repo:nginx
+        image: beny14/nginx_static:latest
         ports:
         - containerPort: 80

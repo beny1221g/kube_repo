@@ -15,6 +15,6 @@ spec:
     spec:
       containers:
       - name: app
-        image: beny14/kube_repo:app
+        image: beny14/python_app:latest
         ports:
         - containerPort: 5000

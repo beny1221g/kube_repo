@@ -5,7 +5,7 @@ metadata:
   namespace: benyz
 spec:
   rules:
-    - host: your-domain.com
+    - host: localhost
       http:
         paths:
           - path: /app
@@ -15,10 +15,3 @@ spec:
                 name: app-service
                 port:
                   number: 5000
-          - path: /
-            pathType: Prefix
-            backend:
-              service:
-                name: nginx-service
-                port:
-                  number: 80
