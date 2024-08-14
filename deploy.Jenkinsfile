@@ -20,14 +20,15 @@ pipeline {
                     echo "Applying Kubernetes configurations"
 
                     // Apply deployments
-                    sh 'kubectl apply -f k8s/nginx-deployment.yaml -n demo-app'
-                    sh 'kubectl apply -f k8s/app-deployment.yaml -n demo-app'
+                    sh 'kubectl apply -f k8s/nginx-deployment.yaml -n benyz'
+                    sh 'kubectl apply -f k8s/app-deployment.yaml -n benyz'
 
                     // Apply services and ingress
-                    sh 'kubectl apply -f k8s/nginx-service.yaml -n demo-app'
-                    sh 'kubectl apply -f k8s/nginx-ingress.yaml -n demo-app'
+                    sh 'kubectl apply -f k8s/nginx-service.yaml -n benyz'
+                    sh 'kubectl apply -f k8s/nginx-ingress.yaml -n benyz'
 
                     echo "Kubernetes configurations applied"
+
                 }
             }
         }
