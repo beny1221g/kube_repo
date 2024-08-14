@@ -22,7 +22,7 @@ pipeline {
                     // Apply deployments
                     sh 'kubectl apply -f k8s/nginx-deployment.yaml -n benyz'
                     sh 'kubectl apply -f k8s/app-deployment.yaml -n benyz'
-
+                    // up
                     // Apply services and ingress
                     sh 'kubectl apply -f k8s/nginx-service.yaml -n benyz'
                     sh 'kubectl apply -f k8s/nginx-ingress.yaml -n benyz'
