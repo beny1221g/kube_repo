@@ -58,7 +58,7 @@ pipeline {
             steps {
                 script {
                     try {
-                        echo "Starting Docker build for Nginx static site"
+                        echo "Starting Docker build for Nginx static site "
                         sh """
                             docker build -t ${NGINX_REPO}:${BUILD_NUMBER} -f NGINX/Dockerfile NGINX
                             docker tag ${NGINX_REPO}:${BUILD_NUMBER} ${NGINX_REPO}:latest
