@@ -3,7 +3,7 @@ pipeline {
         buildDiscarder(logRotator(daysToKeepStr: '14'))
         disableConcurrentBuilds()
         timestamps()
-        timeout(time: 40, unit: 'MINUTES') // Set a global timeout for the pipeline
+        timeout(time: 40, unit: 'MINUTES')
     }
 
     environment {
@@ -25,23 +25,30 @@ pipeline {
             }
         }
 
-        stage('Build Python App') {
+        stage('Docker Login') {
             steps {
                 withCredentials([usernamePassword(credentialsId: 'dockerhub_key', usernameVariable: 'USERNAME', passwordVariable: 'USERPASS')]) {
-                    script {
-                        try {
-                            echo "Starting Docker build for Python app"
-                            sh """
-                                echo ${USERPASS} | docker login -u ${USERNAME} --password-stdin
-                                docker build -t ${PYTHON_REPO}:${BUILD_NUMBER} -f app/Dockerfile app
-                                docker tag ${PYTHON_REPO}:${BUILD_NUMBER} ${PYTHON_REPO}:latest
-                                docker push ${PYTHON_REPO}:${BUILD_NUMBER}
-                                docker push ${PYTHON_REPO}:latest
-                            """
-                            echo "Docker build and push for Python app completed"
-                        } catch (Exception e) {
-                            error "Build failed: ${e.getMessage()}"
-                        }
+                    sh """
+                        echo ${USERPASS} | docker login -u ${USERNAME} --password-stdin
+                    """
+                }
+            }
+        }
+
+        stage('Build Python App') {
+            steps {
+                script {
+                    try {
+                        echo "Starting Docker build for Python app"
+                        sh """
+                            docker build -t ${PYTHON_REPO}:${BUILD_NUMBER} -f app/Dockerfile app
+                            docker tag ${PYTHON_REPO}:${BUILD_NUMBER} ${PYTHON_REPO}:latest
+                            docker push ${PYTHON_REPO}:${BUILD_NUMBER}
+                            docker push ${PYTHON_REPO}:latest
+                        """
+                        echo "Docker build and push for Python app completed"
+                    } catch (Exception e) {
+                        error "Build failed: ${e.getMessage()}"
                     }
                 }
             }
@@ -49,55 +56,36 @@ pipeline {
 
         stage('Build Nginx Static Site') {
             steps {
-                withCredentials([usernamePassword(credentialsId: 'dockerhub_key', usernameVariable: 'USERNAME', passwordVariable: 'USERPASS')]) {
-                    script {
-                        try {
-                            echo "Starting Docker build for Nginx static site"
-                            sh """
-                                echo ${USERPASS} | docker login -u ${USERNAME} --password-stdin
-                                docker build -t ${NGINX_REPO}:${BUILD_NUMBER} -f NGINX/Dockerfile NGINX
-                                docker tag ${NGINX_REPO}:${BUILD_NUMBER} ${NGINX_REPO}:latest
-                                docker push ${NGINX_REPO}:${BUILD_NUMBER}
-                                docker push ${NGINX_REPO}:latest
-                            """
-                            echo "Docker build and push for Nginx static site completed"
-                        } catch (Exception e) {
-                            error "Build failed: ${e.getMessage()}"
-                        }
+                script {
+                    try {
+                        echo "Starting Docker build for Nginx static site"
+                        sh """
+                            docker build -t ${NGINX_REPO}:${BUILD_NUMBER} -f NGINX/Dockerfile NGINX
+                            docker tag ${NGINX_REPO}:${BUILD_NUMBER} ${NGINX_REPO}:latest
+                            docker push ${NGINX_REPO}:${BUILD_NUMBER}
+                            docker push ${NGINX_REPO}:latest
+                        """
+                        echo "Docker build and push for Nginx static site completed"
+                    } catch (Exception e) {
+                        error "Build failed: ${e.getMessage()}"
                     }
                 }
             }
         }
 
         stage('Archive Artifacts') {
-             steps {
-                  archiveArtifacts artifacts: 'k8s/*.yaml', allowEmptyArchive: true
-                   }
-                                   }
+            steps {
+                archiveArtifacts artifacts: 'k8s/*.yaml', allowEmptyArchive: true
+            }
+        }
     }
 
     post {
         always {
             script {
                 echo "Cleaning up Docker containers and images"
-                def pythonContainerId = sh(script: "docker ps -q -f ancestor=${env.PYTHON_REPO}:${BUILD_NUMBER}", returnStdout: true).trim()
-                def nginxContainerId = sh(script: "docker ps -q -f ancestor=${env.NGINX_REPO}:${BUILD_NUMBER}", returnStdout: true).trim()
-
                 sh """
-                    for id in \$(docker ps -a -q -f ancestor=${env.PYTHON_REPO}:${BUILD_NUMBER}); do
-                        if [ "\$id" != "${pythonContainerId}" ]; then
-                            docker rm -f \$id || true
-                        fi
-                    done
-                    for id in \$(docker ps -a -q -f ancestor=${env.NGINX_REPO}:${BUILD_NUMBER}); do
-                        if [ "\$id" != "${nginxContainerId}" ]; then
-                            docker rm -f \$id || true
-                        fi
-                    done
-                """
-                sh """
-                    docker images --format '{{.Repository}}:{{.Tag}} {{.ID}}' | grep '${env.PYTHON_REPO}' | grep -v ':latest' | grep -v ':${BUILD_NUMBER}' | awk '{print \$2}' | xargs --no-run-if-empty docker rmi -f || true
-                    docker images --format '{{.Repository}}:{{.Tag}} {{.ID}}' | grep '${env.NGINX_REPO}' | grep -v ':latest' | grep -v ':${BUILD_NUMBER}' | awk '{print \$2}' | xargs --no-run-if-empty docker rmi -f || true
+                    docker system prune -f --volumes || true
                 """
                 cleanWs()
                 echo "Cleanup completed"
