@@ -9,5 +9,5 @@ COPY Pages /usr/share/nginx/html
 # Expose port 5005
 EXPOSE 5005
 
-# Run Nginx
+# Run   Nginx
 CMD ["nginx", "-g", "daemon off;"]
