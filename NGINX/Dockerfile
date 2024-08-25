@@ -7,7 +7,7 @@ COPY nginx_conf/default.conf /etc/nginx/conf.d/default.conf
 COPY Pages /usr/share/nginx/html
 
 # Expose port 5005
-EXPOSE 5005
+EXPOSE 80
 
 # Run   Nginx
 CMD ["nginx", "-g", "daemon off;"]
