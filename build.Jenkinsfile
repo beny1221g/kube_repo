@@ -84,13 +84,15 @@ pipeline {
 
     post {
         always {
-            script {
-                echo "Cleaning up Docker containers and images"
-                sh """
-                    docker system prune -f --volumes || true
-                """
-                cleanWs()
-                echo "Cleanup completed"
+            node {
+                script {
+                    echo "Cleaning up Docker containers and images"
+                    sh """
+                        docker system prune -f --volumes || true
+                    """
+                    cleanWs()
+                    echo "Cleanup completed"
+                }
             }
         }
 
