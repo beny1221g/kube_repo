@@ -84,7 +84,7 @@ pipeline {
 
     post {
         always {
-            node {
+            node('any') {
                 script {
                     echo "Cleaning up Docker containers and images"
                     sh """
