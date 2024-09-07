@@ -75,24 +75,23 @@ pipeline {
             }
         }
 
-        stage('Archive Artifacts') {
-            steps {
-                archiveArtifacts artifacts: 'k8s/*.yaml', allowEmptyArchive: true
-            }
-        }
+        // Uncomment if needed
+        // stage('Archive Artifacts') {
+        //     steps {
+        //         archiveArtifacts artifacts: 'k8s/*.yaml', allowEmptyArchive: true
+        //     }
+        // }
     }
 
     post {
         always {
-            node('any') {
-                script {
-                    echo "Cleaning up Docker containers and images"
-                    sh """
-                        docker system prune -f --volumes || true
-                    """
-                    cleanWs()
-                    echo "Cleanup completed"
-                }
+            script {
+                echo "Cleaning up Docker containers and images"
+                sh """
+                    docker system prune -f --volumes || true
+                """
+                cleanWs()
+                echo "Cleanup completed"
             }
         }
 
