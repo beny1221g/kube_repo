@@ -28,9 +28,11 @@ pipeline {
         stage('Docker Login') {
             steps {
                 withCredentials([usernamePassword(credentialsId: 'dockerhub_key', usernameVariable: 'USERNAME', passwordVariable: 'USERPASS')]) {
-                    sh """
-                        echo ${USERPASS} | docker login -u ${USERNAME} --password-stdin
-                    """
+                    script {
+                        sh """
+                            echo ${USERPASS} | docker login -u ${USERNAME} --password-stdin
+                        """
+                    }
                 }
             }
         }
@@ -52,13 +54,13 @@ pipeline {
                     }
                 }
             }
-        } 
+        }
 
         stage('Build Nginx Static Site') {
             steps {
                 script {
                     try {
-                        echo "Starting Docker build for Nginx static site "
+                        echo "Starting Docker build for Nginx static site"
                         sh """
                             docker build -t ${NGINX_REPO}:${BUILD_NUMBER} -f NGINX/Dockerfile NGINX
                             docker tag ${NGINX_REPO}:${BUILD_NUMBER} ${NGINX_REPO}:latest
