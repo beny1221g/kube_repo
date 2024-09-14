@@ -25,4 +25,4 @@ RUN apt-get update && apt-get install -y python3 python3-pip
 
 USER jenkins
 
-# Jenkins agent will automatically start the JNLP agent to connect to Jenkins master
+# Jenkins agent will automatically start the JNLP agent to connect to Jenkins master c
