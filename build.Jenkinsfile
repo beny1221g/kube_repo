@@ -87,9 +87,7 @@ pipeline {
         always {
             script {
                 echo "Cleaning up Docker containers and images"
-                sh """
-                    docker system prune -f --volumes || true
-                """
+                sh "docker system prune -f --volumes || true"
                 cleanWs()
                 echo "Cleanup completed"
             }
