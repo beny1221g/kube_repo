@@ -11,20 +11,27 @@ RUN mkdir /snyk && cd /snyk \
     && chmod +x ./snyk
 
 # Stage 2: Jenkins Agent Base
-FROM jenkins/inbound-agent:4.10-3-jdk11  # JNLP agent image
+FROM jenkins/inbound-agent:4.10-3-jdk11
+
+# Switch to root user for directory creation and copying files
+USER root
 
 # Copy over AWS CLI and Snyk tools
 COPY --from=installer /usr/local/aws-cli/ /usr/local/aws-cli/
 COPY --from=installer /aws-cli-bin/ /usr/local/bin/
 COPY --from=installer /snyk/ /usr/local/bin/
 COPY --from=installer /snyk/ /usr/bin/
-RUN mkdir /k8s/jenkins
+
+# Create necessary directories with root privileges
+RUN mkdir -p /k8s/jenkins
+
+# Copy agent.jar to /k8s/jenkins
 COPY /agent.jar /k8s/jenkins/agent.jar
 
 # Install Python for custom builds
-USER root
 RUN apt-get update && apt-get install -y python3 python3-pip
 
+# Switch back to jenkins user
 USER jenkins
 
 # Jenkins agent will automatically start the JNLP agent to connect to Jenkins master
