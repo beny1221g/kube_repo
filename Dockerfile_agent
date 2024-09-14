@@ -18,6 +18,8 @@ COPY --from=installer /usr/local/aws-cli/ /usr/local/aws-cli/
 COPY --from=installer /aws-cli-bin/ /usr/local/bin/
 COPY --from=installer /snyk/ /usr/local/bin/
 COPY --from=installer /snyk/ /usr/bin/
+RUN mkdir -p /k8s/jenkins
+COPY /agent.jar /k8s/jenkins/agent.jar
 
 # Install Python for custom builds
 USER root
