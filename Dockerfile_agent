@@ -1,3 +1,4 @@
+# Stage 1: Installer for AWS CLI and Snyk
 FROM amazonlinux:2 as installer
 RUN yum update -y \
     && yum install -y unzip \
@@ -9,11 +10,19 @@ RUN mkdir /snyk && cd /snyk \
     && curl https://static.snyk.io/cli/v1.666.0/snyk-linux -o snyk \
     && chmod +x ./snyk
 
-FROM jenkins/agent
+# Stage 2: Jenkins Agent Base
+FROM jenkins/inbound-agent:4.10-3-jdk11  # JNLP agent image
+
+# Copy over AWS CLI and Snyk tools
 COPY --from=installer /usr/local/aws-cli/ /usr/local/aws-cli/
 COPY --from=installer /aws-cli-bin/ /usr/local/bin/
 COPY --from=installer /snyk/ /usr/local/bin/
 COPY --from=installer /snyk/ /usr/bin/
+
+# Install Python for custom builds
 USER root
 RUN apt-get update && apt-get install -y python3 python3-pip
+
 USER jenkins
+
+# Jenkins agent will automatically start the JNLP agent to connect to Jenkins master
