@@ -12,10 +12,11 @@ pipeline {
     }
 
     agent {
-        docker {
-            image 'beny14/dockerfile_agent:latest'
-            args '--user root -v /var/run/docker.sock:/var/run/docker.sock'
-        }
+           lable 'ec2-fleet-bz'
+//         docker {
+//             image 'beny14/dockerfile_agent:latest'
+//             args '--user root -v /var/run/docker.sock:/var/run/docker.sock'
+//         }
     }
 
     stages {
