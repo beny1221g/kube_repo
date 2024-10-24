@@ -74,6 +74,26 @@ def buildAndPushApp(String repo, String dockerfile, String contextDir) {
                 echo "Running on EC2"
             } else {
                 echo "Running on EKS or unknown environment"
+                podTemplate(yaml: '''
+                            apiVersion: v1
+                            kind: Pod
+                            spec:
+                              serviceAccountName: jenkins
+                              containers:
+                              - name: jnlp
+                                image: jenkins/inbound-agent
+                                args: ['--user', 'root', '-v', '/var/run/docker.sock:/var/run/docker.sock']
+                              - name: build
+                                image: beny14/dockerfile_agent:latest
+                                tty: true
+                                volumeMounts:
+                                - name: docker-sock
+                                  mountPath: /var/run/docker.sock
+                              volumes:
+                              - name: docker-sock
+                                hostPath:
+                                  path: /var/run/docker.sock
+                        ''')
             }
 
             echo "Starting Docker build for ${repo}"
