@@ -2,7 +2,6 @@ pipeline {
     options {
         buildDiscarder(logRotator(daysToKeepStr: '14'))
         disableConcurrentBuilds()
-        // timestamps()  // Uncomment if needed
         timeout(time: 40, unit: 'MINUTES')
     }
 
@@ -11,25 +10,23 @@ pipeline {
         NGINX_REPO = "beny14/nginx_static"
     }
 
-    agent none  // No agent specified initially, chosen dynamically in stages
+    agent none
 
     stages {
         stage('Detect Environment and Choose Agent') {
             steps {
                 script {
+                    echo "Checking environment..."
                     if (env.KUBERNETES_SERVICE_HOST) {
-                        // Jenkins is running inside Kubernetes
+                        echo "Running in Kubernetes. Setting up pod template..."
                         podTemplate(yaml: '''
                             apiVersion: v1
                             kind: Pod
-                            metadata:
-                              labels:
-                                some-label: some-value
                             spec:
                               containers:
                               - name: jnlp
                                 image: beny14/dockerfile_agent:latest
-                                args: '--user root -v /var/run/docker.sock:/var/run/docker.sock'
+                                args: ['--user', 'root', '-v', '/var/run/docker.sock:/var/run/docker.sock']
                               - name: build
                                 image: beny14/dockerfile_agent:latest
                                 tty: true
@@ -39,10 +36,9 @@ pipeline {
                             }
                         }
                     } else {
-                        // Jenkins is running on EC2 (AWS)
+                        echo "Running on EC2 AWS instance."
                         node('ec2-fleet-bz') {
-                            echo "Running on EC2 AWS instance"
-                            label 'ec2-fleet-bz'
+                            echo "Running tasks inside EC2 instance."
                         }
                     }
                 }
@@ -108,13 +104,6 @@ pipeline {
                 }
             }
         }
-
-        // Uncomment if needed
-        // stage('Archive Artifacts') {
-        //     steps {
-        //         archiveArtifacts artifacts: 'k8s/*.yaml', allowEmptyArchive: true
-        //     }
-        // }
     }
 
     post {
@@ -135,10 +124,6 @@ pipeline {
         }
     }
 }
-
-
-
-
 
 
 // pipeline {
