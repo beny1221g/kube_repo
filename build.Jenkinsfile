@@ -55,12 +55,6 @@ pipeline {
             }
         }
     }
-
-    post {
-        always {
-            echo 'Cleaning up...'
-        }
-    }
 }
 
 // Centralized Function to build and push Docker images
@@ -114,6 +108,11 @@ def buildAndPushApp(String repo, String dockerfile, String contextDir) {
         }
     }
 }
+post {
+     always {
+         echo 'Cleaning up...'
+        }
+    }
 
 // pipeline {
 //     agent { label 'ec2-fleet-bz2' }
