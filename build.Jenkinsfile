@@ -10,8 +10,9 @@ pipeline {
         NGINX_REPO = "beny14/nginx_static"
     }
 
+    // Dynamically select agent based on environment (EC2 or EKS)
     agent {
-        label 'ec2-fleet-bz2'  // Adjust this label as needed for EKS
+        label getAgentLabel() // Use a function to dynamically set the agent label
     }
 
     stages {
@@ -62,13 +63,6 @@ pipeline {
 // Centralized Function to build and push Docker images
 def buildAndPushApp(String repo, String dockerfile, String contextDir) {
     try {
-        def isEC2 = sh(script: 'curl -s http://169.254.169.254/latest/meta-data/instance-id || true', returnStdout: true).trim()
-        if (isEC2) {
-            echo "Running on EC2"
-        } else {
-            echo "Running on EKS or unknown environment"
-        }
-
         echo "Starting Docker build for ${repo}"
         sh """
             docker build -t ${repo}:${BUILD_NUMBER} -f ${dockerfile} ${contextDir}
@@ -79,6 +73,19 @@ def buildAndPushApp(String repo, String dockerfile, String contextDir) {
         echo "Docker build and push completed for ${repo}"
     } catch (Exception e) {
         error "Build failed: ${e.getMessage()}"
+    }
+}
+
+// Function to dynamically select agent label based on environment
+def getAgentLabel() {
+    def isEC2 = sh(script: 'curl -s http://169.254.169.254/latest/meta-data/instance-id || true', returnStdout: true).trim()
+
+    if (isEC2) {
+        echo "Running on EC2, selecting EC2 agent."
+        return 'ec2-fleet-bz2' // The label for your EC2 agents
+    } else {
+        echo "Running on EKS, selecting EKS agent."
+        return 'eks-agent-label' // Adjust the label for your EKS agent
     }
 }
 
