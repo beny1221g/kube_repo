@@ -2,7 +2,6 @@ pipeline {
     agent {
         kubernetes {
             label 'jenkins-agent'
-            defaultContainer 'build' // Specify the default container for running pipeline steps
             yaml '''
                 apiVersion: v1
                 kind: Pod
@@ -15,15 +14,15 @@ pipeline {
                     image: jenkins/inbound-agent
                     args: ['--user', 'root', '-v', '/var/run/docker.sock:/var/run/docker.sock']
                   - name: build
-                    image: beny14/dockerfile_agent:latest // Use your custom agent image here
+                    image: beny14/dockerfile_agent:latest
                     tty: true
                     volumeMounts:
                     - name: docker-sock
                       mountPath: /var/run/docker.sock
-                volumes:
-                - name: docker-sock
-                  hostPath:
-                    path: /var/run/docker.sock
+                  volumes:
+                  - name: docker-sock
+                    hostPath:
+                      path: /var/run/docker.sock
             '''
         }
     }
