@@ -24,27 +24,28 @@ pipeline {
         stage('Docker Login') {
             steps {
                 withCredentials([usernamePassword(credentialsId: 'dockerhub_key', usernameVariable: 'USERNAME', passwordVariable: 'USERPASS')]) {
-                    script {
-                        sh """
-                            echo ${USERPASS} | docker login -u ${USERNAME} --password-stdin
-                        """
-                    }
+                    sh """
+                        echo ${USERPASS} | docker login -u ${USERNAME} --password-stdin
+                    """
                 }
             }
         }
 
-        stage('Build and Push') {
-            steps {
-                script {
-                    def isEC2 = sh(script: 'curl -s http://169.254.169.254/latest/meta-data/instance-id || true', returnStdout: true).trim()
-                    if (isEC2) {
-                        echo "Running on EC2"
-                        buildPythonApp(PYTHON_REPO)
-                        buildNginxApp(NGINX_REPO)
-                    } else {
-                        echo "Running on EKS or unknown environment"
-                        buildPythonAppEKS(PYTHON_REPO)
-                        buildNginxAppEKS(NGINX_REPO)
+        stage('Build and Push Applications') {
+            parallel {
+                stage('Build and Push Python App') {
+                    steps {
+                        script {
+                            buildAndPushApp(PYTHON_REPO, 'app/Dockerfile', 'app')
+                        }
+                    }
+                }
+
+                stage('Build and Push Nginx App') {
+                    steps {
+                        script {
+                            buildAndPushApp(NGINX_REPO, 'NGINX/Dockerfile', 'NGINX')
+                        }
                     }
                 }
             }
@@ -58,65 +59,24 @@ pipeline {
     }
 }
 
-// Function to build and push Python app for EC2
-def buildPythonApp(String repo) {
+// Centralized Function to build and push Docker images
+def buildAndPushApp(String repo, String dockerfile, String contextDir) {
     try {
-        echo "Starting Docker build for Python app on EC2"
-        sh """
-            docker build -t ${repo}:${BUILD_NUMBER} -f app/Dockerfile app
-            docker tag ${repo}:${BUILD_NUMBER} ${repo}:latest
-            docker push ${repo}:${BUILD_NUMBER}
-            docker push ${repo}:latest
-        """
-        echo "Docker build and push for Python app completed on EC2"
-    } catch (Exception e) {
-        error "Build failed: ${e.getMessage()}"
-    }
-}
+        def isEC2 = sh(script: 'curl -s http://169.254.169.254/latest/meta-data/instance-id || true', returnStdout: true).trim()
+        if (isEC2) {
+            echo "Running on EC2"
+        } else {
+            echo "Running on EKS or unknown environment"
+        }
 
-// Function to build and push Nginx app for EC2
-def buildNginxApp(String repo) {
-    try {
-        echo "Starting Docker build for Nginx static site on EC2"
+        echo "Starting Docker build for ${repo}"
         sh """
-            docker build -t ${repo}:${BUILD_NUMBER} -f NGINX/Dockerfile NGINX
+            docker build -t ${repo}:${BUILD_NUMBER} -f ${dockerfile} ${contextDir}
             docker tag ${repo}:${BUILD_NUMBER} ${repo}:latest
             docker push ${repo}:${BUILD_NUMBER}
             docker push ${repo}:latest
         """
-        echo "Docker build and push for Nginx static site completed on EC2"
-    } catch (Exception e) {
-        error "Build failed: ${e.getMessage()}"
-    }
-}
-
-// Function to build and push Python app for EKS
-def buildPythonAppEKS(String repo) {
-    try {
-        echo "Starting Docker build for Python app on EKS"
-        sh """
-            docker build -t ${repo}:${BUILD_NUMBER} -f app/Dockerfile app
-            docker tag ${repo}:${BUILD_NUMBER} ${repo}:latest
-            docker push ${repo}:${BUILD_NUMBER}
-            docker push ${repo}:latest
-        """
-        echo "Docker build and push for Python app completed on EKS"
-    } catch (Exception e) {
-        error "Build failed: ${e.getMessage()}"
-    }
-}
-
-// Function to build and push Nginx app for EKS
-def buildNginxAppEKS(String repo) {
-    try {
-        echo "Starting Docker build for Nginx static site on EKS"
-        sh """
-            docker build -t ${repo}:${BUILD_NUMBER} -f NGINX/Dockerfile NGINX
-            docker tag ${repo}:${BUILD_NUMBER} ${repo}:latest
-            docker push ${repo}:${BUILD_NUMBER}
-            docker push ${repo}:latest
-        """
-        echo "Docker build and push for Nginx static site completed on EKS"
+        echo "Docker build and push completed for ${repo}"
     } catch (Exception e) {
         error "Build failed: ${e.getMessage()}"
     }
