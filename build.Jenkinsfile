@@ -31,30 +31,30 @@ pipeline {
                                 image: beny14/dockerfile_agent:latest
                                 tty: true
                             ''') {
-                            node(POD_LABEL) {  // Assign node to the Kubernetes pod
+                            node(POD_LABEL) {
                                 echo "Running inside Kubernetes pod"
-                                // Place further steps that should run inside the pod here
                             }
                         }
                     } else {
-                        echo "Running on EC2 AWS instance."
-                        node('ec2-fleet-bz') {
-                            echo "Running tasks inside EC2 instance."
-                        }
+                        error "Not running in Kubernetes. Please run on Kubernetes."
                     }
                 }
             }
         }
 
         stage('Checkout') {
-            agent any  // Ensure an agent is used here
+            agent {
+                label 'kubernetes-agent'
+            }
             steps {
                 git url: 'https://github.com/beny1221g/kube_repo.git', branch: 'main'
             }
         }
 
         stage('Docker Login') {
-            agent any
+            agent {
+                label 'kubernetes-agent'
+            }
             steps {
                 withCredentials([usernamePassword(credentialsId: 'dockerhub_key', usernameVariable: 'USERNAME', passwordVariable: 'USERPASS')]) {
                     script {
@@ -67,7 +67,9 @@ pipeline {
         }
 
         stage('Build Python App') {
-            agent any
+            agent {
+                label 'kubernetes-agent'
+            }
             steps {
                 script {
                     try {
@@ -87,7 +89,9 @@ pipeline {
         }
 
         stage('Build Nginx Static Site') {
-            agent any
+            agent {
+                label 'kubernetes-agent'
+            }
             steps {
                 script {
                     try {
