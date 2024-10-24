@@ -36,7 +36,42 @@ pipeline {
                 stage('Build and Push Python App') {
                     steps {
                         script {
-                            buildAndPushApp(PYTHON_REPO, 'app/Dockerfile', 'app')
+                            // Building and pushing Python App
+                            echo "Running on EKS"
+                            kubernetes {
+                                label 'jenkins-agent'
+                                podTemplate(yaml: '''
+                                    apiVersion: v1
+                                    kind: Pod
+                                    labels:
+                                      jenkins-agent: true
+                                    spec:
+                                      serviceAccountName: jenkins
+                                      containers:
+                                      - name: jnlp
+                                        image: jenkins/inbound-agent
+                                        args: ['--user', 'root', '-v', '/var/run/docker.sock:/var/run/docker.sock']
+                                      - name: build
+                                        image: beny14/dockerfile_agent:latest
+                                        tty: true
+                                        volumeMounts:
+                                        - name: docker-sock
+                                          mountPath: /var/run/docker.sock
+                                      volumes:
+                                      - name: docker-sock
+                                        hostPath:
+                                          path: /var/run/docker.sock
+                                ''') {
+                                    echo "Starting Docker build for ${PYTHON_REPO}"
+                                    sh """
+                                        docker build -t ${PYTHON_REPO}:${BUILD_NUMBER} -f app/Dockerfile app
+                                        docker tag ${PYTHON_REPO}:${BUILD_NUMBER} ${PYTHON_REPO}:latest
+                                        docker push ${PYTHON_REPO}:${BUILD_NUMBER}
+                                        docker push ${PYTHON_REPO}:latest
+                                    """
+                                    echo "Docker build and push completed for ${PYTHON_REPO}"
+                                }
+                            }
                         }
                     }
                 }
@@ -44,54 +79,44 @@ pipeline {
                 stage('Build and Push Nginx App') {
                     steps {
                         script {
-                            buildAndPushApp(NGINX_REPO, 'NGINX/Dockerfile', 'NGINX')
+                            // Building and pushing Nginx App
+                            echo "Running on EKS"
+                            kubernetes {
+                                label 'jenkins-agent'
+                                podTemplate(yaml: '''
+                                    apiVersion: v1
+                                    kind: Pod
+                                    labels:
+                                      jenkins-agent: true
+                                    spec:
+                                      serviceAccountName: jenkins
+                                      containers:
+                                      - name: jnlp
+                                        image: jenkins/inbound-agent
+                                        args: ['--user', 'root', '-v', '/var/run/docker.sock:/var/run/docker.sock']
+                                      - name: build
+                                        image: beny14/dockerfile_agent:latest
+                                        tty: true
+                                        volumeMounts:
+                                        - name: docker-sock
+                                          mountPath: /var/run/docker.sock
+                                      volumes:
+                                      - name: docker-sock
+                                        hostPath:
+                                          path: /var/run/docker.sock
+                                ''') {
+                                    echo "Starting Docker build for ${NGINX_REPO}"
+                                    sh """
+                                        docker build -t ${NGINX_REPO}:${BUILD_NUMBER} -f NGINX/Dockerfile NGINX
+                                        docker tag ${NGINX_REPO}:${BUILD_NUMBER} ${NGINX_REPO}:latest
+                                        docker push ${NGINX_REPO}:${BUILD_NUMBER}
+                                        docker push ${NGINX_REPO}:latest
+                                    """
+                                    echo "Docker build and push completed for ${NGINX_REPO}"
+                                }
+                            }
                         }
                     }
-                }
-            }
-        }
-    }
-
-    // Centralized Function to build and push Docker images
-    // This should be outside the `pipeline` block
-    // or defined in a shared library
-    def buildAndPushApp(String repo, String dockerfile, String contextDir) {
-        script {
-            echo "Running on EKS"
-            // Define the pod template here for EKS
-            kubernetes {
-                label 'jenkins-agent'
-                podTemplate(yaml: '''
-                    apiVersion: v1
-                    kind: Pod
-                    labels:
-                      jenkins-agent: true
-                    spec:
-                      serviceAccountName: jenkins
-                      containers:
-                      - name: jnlp
-                        image: jenkins/inbound-agent
-                        args: ['--user', 'root', '-v', '/var/run/docker.sock:/var/run/docker.sock']
-                      - name: build
-                        image: beny14/dockerfile_agent:latest
-                        tty: true
-                        volumeMounts:
-                        - name: docker-sock
-                          mountPath: /var/run/docker.sock
-                      volumes:
-                      - name: docker-sock
-                        hostPath:
-                          path: /var/run/docker.sock
-                ''') {
-                    // The steps to execute within the pod
-                    echo "Starting Docker build for ${repo}"
-                    sh """
-                        docker build -t ${repo}:${BUILD_NUMBER} -f ${dockerfile} ${contextDir}
-                        docker tag ${repo}:${BUILD_NUMBER} ${repo}:latest
-                        docker push ${repo}:${BUILD_NUMBER}
-                        docker push ${repo}:latest
-                    """
-                    echo "Docker build and push completed for ${repo}"
                 }
             }
         }
