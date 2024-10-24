@@ -10,6 +10,7 @@ pipeline {
         NGINX_REPO = "beny14/nginx_static"
     }
 
+
     agent {
         label 'ec2-fleet-bz2'  // Adjust this label as needed for EKS
     }
