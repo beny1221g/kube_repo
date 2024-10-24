@@ -11,7 +11,7 @@ pipeline {
     }
 
     agent {
-        label none  // This will be the default agent
+        label 'ec2-fleet-bz2'  // This will be the default agent
     }
 
     stages {
