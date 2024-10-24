@@ -17,7 +17,7 @@ pipeline {
             steps {
                 script {
                     echo "Checking environment..."
-                    if (env.KUBERNETES_SERVICE_HOST) {
+                    if (!env.KUBERNETES_SERVICE_HOST) {
                         echo "Running in EKS. Setting up pod template..."
                         podTemplate(yaml: '''
                             apiVersion: v1
