@@ -74,9 +74,15 @@ def buildAndPushApp(String repo, String dockerfile, String contextDir) {
                 echo "Running on EC2"
             } else {
                 echo "Running on EKS or unknown environment"
+                kubernetes {
+                   label 'jenkins-agent'
+                    // Other configurations...
+                    }
                 podTemplate(yaml: '''
                             apiVersion: v1
                             kind: Pod
+                            labels:
+                              jenkins-agent: true
                             spec:
                               serviceAccountName: jenkins
                               containers:
