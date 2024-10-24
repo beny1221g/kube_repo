@@ -93,7 +93,7 @@ pipeline {
                         }
                     } else {
                         echo "Running in EC2. Using EC2 fleet agent..."
-                        label('ec2-fleet-bz') {
+                        label('ec2-fleet-bz2') {
                             // Repeat the same stages as above
                             stage('Checkout') {
                                 git url: 'https://github.com/beny1221g/kube_repo.git', branch: 'main'
