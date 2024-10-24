@@ -39,13 +39,11 @@ pipeline {
                               - name: docker-sock
                                 hostPath:
                                   path: /var/run/docker.sock
-                            ''') {
-                            node(POD_LABEL) {
-                                echo "Running inside EKS pod"
-                            }
+                            ''')
                         }
-                    }
                     else { agent {label 'ec2-fleet-bz'}}
+
+                    }
                 }
             }
         }
