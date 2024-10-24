@@ -11,7 +11,7 @@ pipeline {
     }
 
     agent {
-        label 'ec2-fleet-bz2'  // Adjust this label as needed for EKS
+        label 'k8s-agent'  // Use the Kubernetes label you configured
     }
 
     stages {
@@ -24,29 +24,21 @@ pipeline {
         stage('Docker Login') {
             steps {
                 withCredentials([usernamePassword(credentialsId: 'dockerhub_key', usernameVariable: 'USERNAME', passwordVariable: 'USERPASS')]) {
-                    sh """
-                        echo ${USERPASS} | docker login -u ${USERNAME} --password-stdin
-                    """
+                    script {
+                        sh """
+                            echo ${USERPASS} | docker login -u ${USERNAME} --password-stdin
+                        """
+                    }
                 }
             }
         }
 
-        stage('Build and Push Applications') {
-            parallel {
-                stage('Build and Push Python App') {
-                    steps {
-                        script {
-                            buildAndPushApp(PYTHON_REPO, 'app/Dockerfile', 'app')
-                        }
-                    }
-                }
-
-                stage('Build and Push Nginx App') {
-                    steps {
-                        script {
-                            buildAndPushApp(NGINX_REPO, 'NGINX/Dockerfile', 'NGINX')
-                        }
-                    }
+        stage('Build and Push') {
+            steps {
+                script {
+                    echo "Running on Kubernetes"
+                    buildPythonApp(PYTHON_REPO)
+                    buildNginxApp(NGINX_REPO)
                 }
             }
         }
@@ -59,24 +51,33 @@ pipeline {
     }
 }
 
-// Centralized Function to build and push Docker images
-def buildAndPushApp(String repo, String dockerfile, String contextDir) {
+// Function to build and push Python app
+def buildPythonApp(String repo) {
     try {
-        def isEC2 = sh(script: 'curl -s http://169.254.169.254/latest/meta-data/instance-id || true', returnStdout: true).trim()
-        if (isEC2) {
-            echo "Running on EC2"
-        } else {
-            echo "Running on EKS or unknown environment"
-        }
-
-        echo "Starting Docker build for ${repo}"
+        echo "Starting Docker build for Python app"
         sh """
-            docker build -t ${repo}:${BUILD_NUMBER} -f ${dockerfile} ${contextDir}
+            docker build -t ${repo}:${BUILD_NUMBER} -f app/Dockerfile app
             docker tag ${repo}:${BUILD_NUMBER} ${repo}:latest
             docker push ${repo}:${BUILD_NUMBER}
             docker push ${repo}:latest
         """
-        echo "Docker build and push completed for ${repo}"
+        echo "Docker build and push for Python app completed"
+    } catch (Exception e) {
+        error "Build failed: ${e.getMessage()}"
+    }
+}
+
+// Function to build and push Nginx app
+def buildNginxApp(String repo) {
+    try {
+        echo "Starting Docker build for Nginx static site"
+        sh """
+            docker build -t ${repo}:${BUILD_NUMBER} -f NGINX/Dockerfile NGINX
+            docker tag ${repo}:${BUILD_NUMBER} ${repo}:latest
+            docker push ${repo}:${BUILD_NUMBER}
+            docker push ${repo}:latest
+        """
+        echo "Docker build and push for Nginx static site completed"
     } catch (Exception e) {
         error "Build failed: ${e.getMessage()}"
     }
