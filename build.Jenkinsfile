@@ -36,19 +36,15 @@ pipeline {
         stage('Build and Push') {
             steps {
                 script {
-                    // Determine if running on EC2 or EKS
-                    if (env.NODE_NAME.contains("ec2")) {
-                        // EC2-specific build and push steps
+                    def isEC2 = sh(script: 'curl -s http://169.254.169.254/latest/meta-data/instance-id || true', returnStdout: true).trim()
+                    if (isEC2) {
                         echo "Running on EC2"
                         buildPythonApp(PYTHON_REPO)
                         buildNginxApp(NGINX_REPO)
-                    } else if (env.NODE_NAME.contains("eks")) {
-                        // EKS-specific build and push steps
-                        echo "Running on EKS"
+                    } else {
+                        echo "Running on EKS or unknown environment"
                         buildPythonAppEKS(PYTHON_REPO)
                         buildNginxAppEKS(NGINX_REPO)
-                    } else {
-                        error "Unknown environment: ${env.NODE_NAME}"
                     }
                 }
             }
@@ -98,7 +94,6 @@ def buildNginxApp(String repo) {
 def buildPythonAppEKS(String repo) {
     try {
         echo "Starting Docker build for Python app on EKS"
-        // Add EKS-specific commands here if different from EC2
         sh """
             docker build -t ${repo}:${BUILD_NUMBER} -f app/Dockerfile app
             docker tag ${repo}:${BUILD_NUMBER} ${repo}:latest
@@ -115,7 +110,6 @@ def buildPythonAppEKS(String repo) {
 def buildNginxAppEKS(String repo) {
     try {
         echo "Starting Docker build for Nginx static site on EKS"
-        // Add EKS-specific commands here if different from EC2
         sh """
             docker build -t ${repo}:${BUILD_NUMBER} -f NGINX/Dockerfile NGINX
             docker tag ${repo}:${BUILD_NUMBER} ${repo}:latest
