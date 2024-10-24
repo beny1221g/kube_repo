@@ -68,7 +68,7 @@ def buildAndPushApp(String repo, String dockerfile, String contextDir) {
     script {
         try {
             def isEC2 = sh(script: 'curl -s http://169.254.169.254/latest/meta-data/instance-id || true', returnStdout: true).trim()
-            if (!isEC2) {
+            if (isEC2) {
                 echo "Running on EC2"
             } else {
                 echo "Running on EKS"
