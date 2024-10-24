@@ -40,7 +40,7 @@ pipeline {
                         }
                     } else {
                         // Jenkins is running on EC2 (AWS)
-                        node('ec2-fleet-bz') {
+                        label 'ec2-fleet-bz' {
                             echo "Running on EC2 AWS instance"
                         }
                     }
