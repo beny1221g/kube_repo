@@ -2,8 +2,8 @@ pipeline {
     agent {
         kubernetes {
             label 'jenkins-agent'
-            defaultContainer 'build' // This specifies the default container to run the steps in
-            podTemplate(yaml: '''
+            defaultContainer 'build' // Specify the default container for running pipeline steps
+            yaml '''
                 apiVersion: v1
                 kind: Pod
                 labels:
@@ -24,7 +24,7 @@ pipeline {
                 - name: docker-sock
                   hostPath:
                     path: /var/run/docker.sock
-            ''')
+            '''
         }
     }
 
