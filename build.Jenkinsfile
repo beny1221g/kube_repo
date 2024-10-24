@@ -10,9 +10,6 @@ pipeline {
         NGINX_REPO = "beny14/nginx_static"
     }
 
-    agent {
-        label 'ec2-fleet-bz2'  // This will be the default agent
-    }
 
     stages {
         stage('Checkout') {
@@ -55,16 +52,11 @@ pipeline {
             }
         }
     }
-}
+
 
 // Centralized Function to build and push Docker images
 def buildAndPushApp(String repo, String dockerfile, String contextDir) {
     script {
-        try {
-            def isEC2 = sh(script: 'curl -s http://169.254.169.254/latest/meta-data/instance-id || true', returnStdout: true).trim()
-            if (isEC2) {
-                echo "Running on EC2"
-            } else {
                 echo "Running on EKS"
                 // Define the pod template here for EKS
                 kubernetes {
@@ -102,9 +94,7 @@ def buildAndPushApp(String repo, String dockerfile, String contextDir) {
                         echo "Docker build and push completed for ${repo}"
                     }
                 }
-            }
-        } catch (Exception e) {
-            error "Build failed: ${e.getMessage()}"
+
         }
     }
 }
