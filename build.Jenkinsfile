@@ -18,25 +18,33 @@ pipeline {
                 script {
                     echo "Checking environment..."
                     if (env.KUBERNETES_SERVICE_HOST) {
-                        echo "Running in Kubernetes. Setting up pod template..."
+                        echo "Running in EKS. Setting up pod template..."
                         podTemplate(yaml: '''
                             apiVersion: v1
                             kind: Pod
                             spec:
+                              serviceAccountName: jenkins  # Ensure this is your Jenkins Service Account
                               containers:
                               - name: jnlp
-                                image: beny14/dockerfile_agent:latest
+                                image: jenkins/inbound-agent
                                 args: ['--user', 'root', '-v', '/var/run/docker.sock:/var/run/docker.sock']
                               - name: build
                                 image: beny14/dockerfile_agent:latest
                                 tty: true
+                                volumeMounts:
+                                - name: docker-sock
+                                  mountPath: /var/run/docker.sock
+                              volumes:
+                              - name: docker-sock
+                                hostPath:
+                                  path: /var/run/docker.sock
                             ''') {
                             node(POD_LABEL) {
-                                echo "Running inside Kubernetes pod"
+                                echo "Running inside EKS pod"
                             }
                         }
                     } else {
-                        error "Not running in Kubernetes. Please run on Kubernetes."
+                        error "Not running in EKS. Please run on EKS."
                     }
                 }
             }
@@ -129,7 +137,6 @@ pipeline {
         }
     }
 }
-
 
 // pipeline {
 //     options {
