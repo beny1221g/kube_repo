@@ -31,8 +31,9 @@ pipeline {
                                 image: beny14/dockerfile_agent:latest
                                 tty: true
                             ''') {
-                            node(POD_LABEL) {
+                            node(POD_LABEL) {  // Assign node to the Kubernetes pod
                                 echo "Running inside Kubernetes pod"
+                                // Place further steps that should run inside the pod here
                             }
                         }
                     } else {
