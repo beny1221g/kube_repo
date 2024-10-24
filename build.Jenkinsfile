@@ -45,7 +45,7 @@ pipeline {
                             }
                         }
                     }
-                    else : agent {label 'ec2-fleet-bz'}
+                    else { agent {label 'ec2-fleet-bz'}}
                 }
             }
         }
