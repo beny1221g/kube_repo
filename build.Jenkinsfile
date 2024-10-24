@@ -10,24 +10,28 @@ pipeline {
         NGINX_REPO = "beny14/nginx_static"
     }
 
-    // Dynamically select agent based on environment (EC2 or EKS)
     agent {
-        label getAgentLabel() // Use a function to dynamically set the agent label
+        label 'ec2-fleet-bz2'  // Adjust this label as needed for EKS
     }
 
     stages {
         stage('Checkout') {
             steps {
-                git url: 'https://github.com/beny1221g/kube_repo.git', branch: 'main'
+                script {
+                    // Ensure the checkout happens in the node context
+                    checkout scm
+                }
             }
         }
 
         stage('Docker Login') {
             steps {
-                withCredentials([usernamePassword(credentialsId: 'dockerhub_key', usernameVariable: 'USERNAME', passwordVariable: 'USERPASS')]) {
-                    sh """
-                        echo ${USERPASS} | docker login -u ${USERNAME} --password-stdin
-                    """
+                script {
+                    withCredentials([usernamePassword(credentialsId: 'dockerhub_key', usernameVariable: 'USERNAME', passwordVariable: 'USERPASS')]) {
+                        sh """
+                            echo ${USERPASS} | docker login -u ${USERNAME} --password-stdin
+                        """
+                    }
                 }
             }
         }
@@ -62,33 +66,29 @@ pipeline {
 
 // Centralized Function to build and push Docker images
 def buildAndPushApp(String repo, String dockerfile, String contextDir) {
-    try {
-        echo "Starting Docker build for ${repo}"
-        sh """
-            docker build -t ${repo}:${BUILD_NUMBER} -f ${dockerfile} ${contextDir}
-            docker tag ${repo}:${BUILD_NUMBER} ${repo}:latest
-            docker push ${repo}:${BUILD_NUMBER}
-            docker push ${repo}:latest
-        """
-        echo "Docker build and push completed for ${repo}"
-    } catch (Exception e) {
-        error "Build failed: ${e.getMessage()}"
+    // Wrap the Docker commands in a script block to ensure proper context
+    script {
+        try {
+            def isEC2 = sh(script: 'curl -s http://169.254.169.254/latest/meta-data/instance-id || true', returnStdout: true).trim()
+            if (isEC2) {
+                echo "Running on EC2"
+            } else {
+                echo "Running on EKS or unknown environment"
+            }
+
+            echo "Starting Docker build for ${repo}"
+            sh """
+                docker build -t ${repo}:${BUILD_NUMBER} -f ${dockerfile} ${contextDir}
+                docker tag ${repo}:${BUILD_NUMBER} ${repo}:latest
+                docker push ${repo}:${BUILD_NUMBER}
+                docker push ${repo}:latest
+            """
+            echo "Docker build and push completed for ${repo}"
+        } catch (Exception e) {
+            error "Build failed: ${e.getMessage()}"
+        }
     }
 }
-
-// Function to dynamically select agent label based on environment
-def getAgentLabel() {
-    def isEC2 = sh(script: 'curl -s http://169.254.169.254/latest/meta-data/instance-id || true', returnStdout: true).trim()
-
-    if (isEC2) {
-        echo "Running on EC2, selecting EC2 agent."
-        return 'ec2-fleet-bz2' // The label for your EC2 agents
-    } else {
-        echo "Running on EKS, selecting EKS agent."
-        return 'eks-agent-label' // Adjust the label for your EKS agent
-    }
-}
-
 
 // pipeline {
 //     agent { label 'ec2-fleet-bz2' }
