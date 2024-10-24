@@ -11,14 +11,13 @@ pipeline {
     }
 
     agent {
-        label 'jenkins-agent'  // Adjust this label as needed for EKS
+        label 'jenkins-agent'  // This will be the default agent
     }
 
     stages {
         stage('Checkout') {
             steps {
                 script {
-                    // Ensure the checkout happens in the node context
                     checkout scm
                 }
             }
@@ -66,50 +65,50 @@ pipeline {
 
 // Centralized Function to build and push Docker images
 def buildAndPushApp(String repo, String dockerfile, String contextDir) {
-    // Wrap the Docker commands in a script block to ensure proper context
     script {
         try {
             def isEC2 = sh(script: 'curl -s http://169.254.169.254/latest/meta-data/instance-id || true', returnStdout: true).trim()
-            if (!isEC2) {
+            if (isEC2) {
                 echo "Running on EC2"
             } else {
-                echo "Running on EKS or unknown environment"
+                echo "Running on EKS"
+                // Define the pod template here for EKS
                 kubernetes {
-                   label 'jenkins-agent'
-                    // Other configurations...
+                    label 'jenkins-agent'
+                    podTemplate(yaml: '''
+                        apiVersion: v1
+                        kind: Pod
+                        labels:
+                          jenkins-agent: true
+                        spec:
+                          serviceAccountName: jenkins
+                          containers:
+                          - name: jnlp
+                            image: jenkins/inbound-agent
+                            args: ['--user', 'root', '-v', '/var/run/docker.sock:/var/run/docker.sock']
+                          - name: build
+                            image: beny14/dockerfile_agent:latest
+                            tty: true
+                            volumeMounts:
+                            - name: docker-sock
+                              mountPath: /var/run/docker.sock
+                          volumes:
+                          - name: docker-sock
+                            hostPath:
+                              path: /var/run/docker.sock
+                    ''') {
+                        // The steps to execute within the pod
+                        echo "Starting Docker build for ${repo}"
+                        sh """
+                            docker build -t ${repo}:${BUILD_NUMBER} -f ${dockerfile} ${contextDir}
+                            docker tag ${repo}:${BUILD_NUMBER} ${repo}:latest
+                            docker push ${repo}:${BUILD_NUMBER}
+                            docker push ${repo}:latest
+                        """
+                        echo "Docker build and push completed for ${repo}"
                     }
-                podTemplate(yaml: '''
-                            apiVersion: v1
-                            kind: Pod
-                            labels:
-                              jenkins-agent: true
-                            spec:
-                              serviceAccountName: jenkins
-                              containers:
-                              - name: jnlp
-                                image: jenkins/inbound-agent
-                                args: ['--user', 'root', '-v', '/var/run/docker.sock:/var/run/docker.sock']
-                              - name: build
-                                image: beny14/dockerfile_agent:latest
-                                tty: true
-                                volumeMounts:
-                                - name: docker-sock
-                                  mountPath: /var/run/docker.sock
-                              volumes:
-                              - name: docker-sock
-                                hostPath:
-                                  path: /var/run/docker.sock
-                        ''')
+                }
             }
-
-            echo "Starting Docker build for ${repo}"
-            sh """
-                docker build -t ${repo}:${BUILD_NUMBER} -f ${dockerfile} ${contextDir}
-                docker tag ${repo}:${BUILD_NUMBER} ${repo}:latest
-                docker push ${repo}:${BUILD_NUMBER}
-                docker push ${repo}:latest
-            """
-            echo "Docker build and push completed for ${repo}"
         } catch (Exception e) {
             error "Build failed: ${e.getMessage()}"
         }
