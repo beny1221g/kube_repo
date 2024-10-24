@@ -1,5 +1,5 @@
 pipeline {
-    agent {label 'ec2-fleet-bz2'}
+    agent { label 'ec2-fleet-bz2' }
 
     options {
         buildDiscarder(logRotator(daysToKeepStr: '14'))
@@ -11,7 +11,6 @@ pipeline {
         PYTHON_REPO = "beny14/python_app"
         NGINX_REPO = "beny14/nginx_static"
     }
-
 
     stages {
         stage('Detect Environment and Choose Agent') {
@@ -39,109 +38,13 @@ pipeline {
                               - name: docker-sock
                                 hostPath:
                                   path: /var/run/docker.sock
-                            ''') {
-                            // Set the agent label for Kubernetes
-                            node(POD_LABEL) {
-                                stage('Checkout') {
-                                    git url: 'https://github.com/beny1221g/kube_repo.git', branch: 'main'
-                                }
-
-                                stage('Docker Login') {
-                                    withCredentials([usernamePassword(credentialsId: 'dockerhub_key', usernameVariable: 'USERNAME', passwordVariable: 'USERPASS')]) {
-                                        script {
-                                            sh """
-                                                echo ${USERPASS} | docker login -u ${USERNAME} --password-stdin
-                                            """
-                                        }
-                                    }
-                                }
-
-                                stage('Build Python App') {
-                                    script {
-                                        try {
-                                            echo "Starting Docker build for Python app"
-                                            sh """
-                                                docker build -t ${PYTHON_REPO}:${BUILD_NUMBER} -f app/Dockerfile app
-                                                docker tag ${PYTHON_REPO}:${BUILD_NUMBER} ${PYTHON_REPO}:latest
-                                                docker push ${PYTHON_REPO}:${BUILD_NUMBER}
-                                                docker push ${PYTHON_REPO}:latest
-                                            """
-                                            echo "Docker build and push for Python app completed"
-                                        } catch (Exception e) {
-                                            error "Build failed: ${e.getMessage()}"
-                                        }
-                                    }
-                                }
-
-                                stage('Build Nginx Static Site') {
-                                    script {
-                                        try {
-                                            echo "Starting Docker build for Nginx static site"
-                                            sh """
-                                                docker build -t ${NGINX_REPO}:${BUILD_NUMBER} -f NGINX/Dockerfile NGINX
-                                                docker tag ${NGINX_REPO}:${BUILD_NUMBER} ${NGINX_REPO}:latest
-                                                docker push ${NGINX_REPO}:${BUILD_NUMBER}
-                                                docker push ${NGINX_REPO}:latest
-                                            """
-                                            echo "Docker build and push for Nginx static site completed"
-                                        } catch (Exception e) {
-                                            error "Build failed: ${e.getMessage()}"
-                                        }
-                                    }
-                                }
-                            }
+                        ''') {
+                            runPipeline()
                         }
                     } else {
                         echo "Running in EC2. Using EC2 fleet agent..."
                         label('ec2-fleet-bz2') {
-                            // Repeat the same stages as above
-                            stage('Checkout') {
-                                git url: 'https://github.com/beny1221g/kube_repo.git', branch: 'main'
-                            }
-
-                            stage('Docker Login') {
-                                withCredentials([usernamePassword(credentialsId: 'dockerhub_key', usernameVariable: 'USERNAME', passwordVariable: 'USERPASS')]) {
-                                    script {
-                                        sh """
-                                            echo ${USERPASS} | docker login -u ${USERNAME} --password-stdin
-                                        """
-                                    }
-                                }
-                            }
-
-                            stage('Build Python App') {
-                                script {
-                                    try {
-                                        echo "Starting Docker build for Python app"
-                                        sh """
-                                            docker build -t ${PYTHON_REPO}:${BUILD_NUMBER} -f app/Dockerfile app
-                                            docker tag ${PYTHON_REPO}:${BUILD_NUMBER} ${PYTHON_REPO}:latest
-                                            docker push ${PYTHON_REPO}:${BUILD_NUMBER}
-                                            docker push ${PYTHON_REPO}:latest
-                                        """
-                                        echo "Docker build and push for Python app completed"
-                                    } catch (Exception e) {
-                                        error "Build failed: ${e.getMessage()}"
-                                    }
-                                }
-                            }
-
-                            stage('Build Nginx Static Site') {
-                                script {
-                                    try {
-                                        echo "Starting Docker build for Nginx static site"
-                                        sh """
-                                            docker build -t ${NGINX_REPO}:${BUILD_NUMBER} -f NGINX/Dockerfile NGINX
-                                            docker tag ${NGINX_REPO}:${BUILD_NUMBER} ${NGINX_REPO}:latest
-                                            docker push ${NGINX_REPO}:${BUILD_NUMBER}
-                                            docker push ${NGINX_REPO}:latest
-                                        """
-                                        echo "Docker build and push for Nginx static site completed"
-                                    } catch (Exception e) {
-                                        error "Build failed: ${e.getMessage()}"
-                                    }
-                                }
-                            }
+                            runPipeline()
                         }
                     }
                 }
@@ -163,6 +66,42 @@ pipeline {
             script {
                 def errorMessage = currentBuild.result == 'FAILURE' ? currentBuild.description : 'Build failed'
                 echo "Error occurred: ${errorMessage}"
+            }
+        }
+    }
+}
+
+def runPipeline() {
+    stage('Checkout') {
+        git url: 'https://github.com/beny1221g/kube_repo.git', branch: 'main'
+    }
+
+    stage('Docker Login') {
+        withCredentials([usernamePassword(credentialsId: 'dockerhub_key', usernameVariable: 'USERNAME', passwordVariable: 'USERPASS')]) {
+            script {
+                sh "echo ${USERPASS} | docker login -u ${USERNAME} --password-stdin"
+            }
+        }
+    }
+
+    buildDockerImage('Build Python App', PYTHON_REPO, 'app/Dockerfile', 'app')
+    buildDockerImage('Build Nginx Static Site', NGINX_REPO, 'NGINX/Dockerfile', 'NGINX')
+}
+
+def buildDockerImage(String stageName, String repo, String dockerfile, String context) {
+    stage(stageName) {
+        script {
+            try {
+                echo "Starting Docker build for ${stageName}"
+                sh """
+                    docker build -t ${repo}:${BUILD_NUMBER} -f ${dockerfile} ${context}
+                    docker tag ${repo}:${BUILD_NUMBER} ${repo}:latest
+                    docker push ${repo}:${BUILD_NUMBER}
+                    docker push ${repo}:latest
+                """
+                echo "Docker build and push for ${stageName} completed"
+            } catch (Exception e) {
+                error "Build failed for ${stageName}: ${e.getMessage()}"
             }
         }
     }
