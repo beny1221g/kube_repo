@@ -10,7 +10,6 @@ pipeline {
         NGINX_REPO = "beny14/nginx_static"
     }
 
-
     stages {
         stage('Checkout') {
             steps {
@@ -53,56 +52,58 @@ pipeline {
         }
     }
 
-
-// Centralized Function to build and push Docker images
-def buildAndPushApp(String repo, String dockerfile, String contextDir) {
-    script {
-                echo "Running on EKS"
-                // Define the pod template here for EKS
-                kubernetes {
-                    label 'jenkins-agent'
-                    podTemplate(yaml: '''
-                        apiVersion: v1
-                        kind: Pod
-                        labels:
-                          jenkins-agent: true
-                        spec:
-                          serviceAccountName: jenkins
-                          containers:
-                          - name: jnlp
-                            image: jenkins/inbound-agent
-                            args: ['--user', 'root', '-v', '/var/run/docker.sock:/var/run/docker.sock']
-                          - name: build
-                            image: beny14/dockerfile_agent:latest
-                            tty: true
-                            volumeMounts:
-                            - name: docker-sock
-                              mountPath: /var/run/docker.sock
-                          volumes:
-                          - name: docker-sock
-                            hostPath:
-                              path: /var/run/docker.sock
-                    ''') {
-                        // The steps to execute within the pod
-                        echo "Starting Docker build for ${repo}"
-                        sh """
-                            docker build -t ${repo}:${BUILD_NUMBER} -f ${dockerfile} ${contextDir}
-                            docker tag ${repo}:${BUILD_NUMBER} ${repo}:latest
-                            docker push ${repo}:${BUILD_NUMBER}
-                            docker push ${repo}:latest
-                        """
-                        echo "Docker build and push completed for ${repo}"
-                    }
+    // Centralized Function to build and push Docker images
+    // This should be outside the `pipeline` block
+    // or defined in a shared library
+    def buildAndPushApp(String repo, String dockerfile, String contextDir) {
+        script {
+            echo "Running on EKS"
+            // Define the pod template here for EKS
+            kubernetes {
+                label 'jenkins-agent'
+                podTemplate(yaml: '''
+                    apiVersion: v1
+                    kind: Pod
+                    labels:
+                      jenkins-agent: true
+                    spec:
+                      serviceAccountName: jenkins
+                      containers:
+                      - name: jnlp
+                        image: jenkins/inbound-agent
+                        args: ['--user', 'root', '-v', '/var/run/docker.sock:/var/run/docker.sock']
+                      - name: build
+                        image: beny14/dockerfile_agent:latest
+                        tty: true
+                        volumeMounts:
+                        - name: docker-sock
+                          mountPath: /var/run/docker.sock
+                      volumes:
+                      - name: docker-sock
+                        hostPath:
+                          path: /var/run/docker.sock
+                ''') {
+                    // The steps to execute within the pod
+                    echo "Starting Docker build for ${repo}"
+                    sh """
+                        docker build -t ${repo}:${BUILD_NUMBER} -f ${dockerfile} ${contextDir}
+                        docker tag ${repo}:${BUILD_NUMBER} ${repo}:latest
+                        docker push ${repo}:${BUILD_NUMBER}
+                        docker push ${repo}:latest
+                    """
+                    echo "Docker build and push completed for ${repo}"
                 }
+            }
+        }
+    }
 
+    post {
+        always {
+            echo 'Cleaning up...'
         }
     }
 }
-post {
-     always {
-         echo 'Cleaning up...'
-        }
-    }
+
 
 // pipeline {
 //     agent { label 'ec2-fleet-bz2' }
