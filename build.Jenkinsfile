@@ -10,7 +10,7 @@ pipeline {
         NGINX_REPO = "beny14/nginx_static"
     }
 
-    agent none
+//     agent none
 
     stages {
         stage('Detect Environment and Choose Agent') {
