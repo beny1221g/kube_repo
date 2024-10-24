@@ -17,6 +17,7 @@ pipeline {
             steps {
                 script {
                     echo "Checking environment..."
+
                     if (!env.KUBERNETES_SERVICE_HOST) {
                         echo "Running in EKS. Setting up pod template..."
                         podTemplate(yaml: '''
@@ -43,9 +44,8 @@ pipeline {
                                 echo "Running inside EKS pod"
                             }
                         }
-                    } else {
-                        error "Not running in EKS. Please run on EKS."
                     }
+                    else : agent {label 'ec2-fleet-bz'}
                 }
             }
         }
