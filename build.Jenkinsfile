@@ -11,7 +11,7 @@ pipeline {
     }
 
     agent {
-        label 'ec2-fleet-bz2'  // Adjust this label as needed for EKS
+        label 'jenkins-agent'  // Adjust this label as needed for EKS
     }
 
     stages {
