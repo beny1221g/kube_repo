@@ -15,6 +15,7 @@ pipeline {
     environment {
         PYTHON_REPO = "beny14/python_app"
         NGINX_REPO = "beny14/nginx_static"
+        POD_LABEL = "my-k8s-agent" // Define the POD_LABEL here
     }
 
     stages {
@@ -22,7 +23,6 @@ pipeline {
             steps {
                 script {
                     echo "Checking environment and selecting agent..."
-
                     if (params.AGENT_TYPE == 'k8s') {
                         echo "Using Kubernetes agent..."
                         podTemplate(yaml: '''
@@ -33,7 +33,7 @@ pipeline {
                               containers:
                               - name: jnlp
                                 image: jenkins/inbound-agent
-                                args: ['--user', 'root', '-v', '/var/run/docker.sock:/var/run/docker.sock']
+                                args: ['-url', '<your-jenkins-url>', 'JenkinsAgent']
                               - name: build
                                 image: beny14/dockerfile_agent:latest
                                 tty: true
@@ -64,8 +64,8 @@ pipeline {
         always {
             script {
                 echo "Cleaning up Docker containers and images"
-                // Use node context for cleanup
-                node(params.AGENT_TYPE == 'ec2' ? 'ec2-fleet-bz2' : POD_LABEL) {
+                def cleanupNode = params.AGENT_TYPE == 'ec2' ? 'ec2-fleet-bz2' : POD_LABEL
+                node(cleanupNode) {
                     sh "docker system prune -f --volumes || true"
                     cleanWs()
                 }
