@@ -74,8 +74,7 @@ pipeline {
 }
 
 def runPipeline() {
-    agent {
-        label params.AGENT_TYPE == 'ec2' ? 'ec2-fleet-bz2' : 'k8s'
+    agent {label params.AGENT_TYPE == 'ec2' ? 'ec2-fleet-bz2' : 'k8s'}
 
 
         stage('Checkout') {
@@ -90,7 +89,7 @@ def runPipeline() {
 
         buildDockerImage('Build Python App', PYTHON_REPO, 'app/Dockerfile', 'app')
         buildDockerImage('Build Nginx Static Site', NGINX_REPO, 'NGINX/Dockerfile', 'NGINX')
-    }
+
 }
 
 def buildDockerImage(String stageName, String repo, String dockerfile, String context) {
