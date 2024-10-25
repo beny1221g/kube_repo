@@ -1,4 +1,5 @@
 pipeline {
+    agent none
     options {
         buildDiscarder(logRotator(daysToKeepStr: '14'))
         disableConcurrentBuilds()
@@ -15,7 +16,6 @@ pipeline {
         PYTHON_REPO = "beny14/python_app"
         NGINX_REPO = "beny14/nginx_static"
     }
-    agent none
 
     stages {
         stage('Detect Environment and Choose Agent') {
@@ -45,7 +45,9 @@ pipeline {
                                 hostPath:
                                   path: /var/run/docker.sock
                         ''') {
-                            runPipeline()
+                            node(POD_LABEL) {
+                                runPipeline()
+                            }
                         }
                     } else {
                         echo "Using EC2 fleet agent..."
@@ -88,21 +90,22 @@ def runPipeline() {
 
 def buildDockerImage(String stageName, String repo, String dockerfile, String context) {
     stage(stageName) {
-        try {
-            echo "Starting Docker build for ${stageName}"
-            sh """
-                docker build -t ${repo}:${BUILD_NUMBER} -f ${dockerfile} ${context}
-                docker tag ${repo}:${BUILD_NUMBER} ${repo}:latest
-                docker push ${repo}:${BUILD_NUMBER}
-                docker push ${repo}:latest
-            """
-            echo "Docker build and push for ${stageName} completed"
-        } catch (Exception e) {
-            error "Build failed for ${stageName}: ${e.getMessage()}"
+        node {
+            try {
+                echo "Starting Docker build for ${stageName}"
+                sh """
+                    docker build -t ${repo}:${BUILD_NUMBER} -f ${dockerfile} ${context}
+                    docker tag ${repo}:${BUILD_NUMBER} ${repo}:latest
+                    docker push ${repo}:${BUILD_NUMBER}
+                    docker push ${repo}:latest
+                """
+                echo "Docker build and push for ${stageName} completed"
+            } catch (Exception e) {
+                error "Build failed for ${stageName}: ${e.getMessage()}"
+            }
         }
     }
 }
-
 
 
 // pipeline {
