@@ -18,52 +18,10 @@ pipeline {
         NGINX_REPO = "beny14/nginx_static"
     }
     agent none
-    }
-
-//     stages {
-//         stage('Detect Environment and Choose Agent') {
-//             steps {
-//                 script {
-//                     echo "Checking environment and selecting agent..."
-//
-//                     if (params.AGENT_TYPE == 'k8s') {
-//                         echo "Using Kubernetes agent..."
-//                         podTemplate(yaml: '''
-//                             apiVersion: v1
-//                             kind: Pod
-//                             spec:
-//                               serviceAccountName: jenkins
-//                               containers:
-//                               - name: jnlp
-//                                 image: jenkins/inbound-agent
-//                                 args: ['--user', 'root', '-v', '/var/run/docker.sock:/var/run/docker.sock']
-//                               - name: build
-//                                 image: beny14/dockerfile_agent:latest
-//                                 tty: true
-//                                 volumeMounts:
-//                                 - name: docker-sock
-//                                   mountPath: /var/run/docker.sock
-//                               volumes:
-//                               - name: docker-sock
-//                                 hostPath:
-//                                   path: /var/run/docker.sock
-//                         ''') {
-//                             node(POD_LABEL) {
-//                                 runPipeline()
-//                             }
-//                         }
-//                     } else {
-//                         echo "Using EC2 fleet agent..."
-//                         node('ec2-fleet-bz2') {
-//                             runPipeline()
-//                         }
-//                     }
-//                 }
-//             }
-//         }
-//     }
+}
 
     post {
+
         always {
             echo "Cleaning up Docker containers and images"
             sh "docker system prune -f --volumes || true"
@@ -74,7 +32,7 @@ pipeline {
             echo "Build failed: ${currentBuild.description}"
         }
     }
-}
+
 
 def runPipeline() {
         agent {label params.AGENT_TYPE == 'ec2' ? 'ec2-fleet-bz2' : 'k8s'}
@@ -225,3 +183,72 @@ def buildDockerImage(String stageName, String repo, String dockerfile, String co
 //     }
 // }
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+//
+//
+//
+//     stages {
+//         stage('Detect Environment and Choose Agent') {
+//             steps {
+//                 script {
+//                     echo "Checking environment and selecting agent..."
+//
+//                     if (params.AGENT_TYPE == 'k8s') {
+//                         echo "Using Kubernetes agent..."
+//                         podTemplate(yaml: '''
+//                             apiVersion: v1
+//                             kind: Pod
+//                             spec:
+//                               serviceAccountName: jenkins
+//                               containers:
+//                               - name: jnlp
+//                                 image: jenkins/inbound-agent
+//                                 args: ['--user', 'root', '-v', '/var/run/docker.sock:/var/run/docker.sock']
+//                               - name: build
+//                                 image: beny14/dockerfile_agent:latest
+//                                 tty: true
+//                                 volumeMounts:
+//                                 - name: docker-sock
+//                                   mountPath: /var/run/docker.sock
+//                               volumes:
+//                               - name: docker-sock
+//                                 hostPath:
+//                                   path: /var/run/docker.sock
+//                         ''') {
+//                             node(POD_LABEL) {
+//                                 runPipeline()
+//                             }
+//                         }
+//                     } else {
+//                         echo "Using EC2 fleet agent..."
+//                         node('ec2-fleet-bz2') {
+//                             runPipeline()
+//                         }
+//                     }
+//                 }
+//             }
+//         }
+//     }
