@@ -1,5 +1,4 @@
 pipeline {
-    agent none
     options {
         buildDiscarder(logRotator(daysToKeepStr: '14'))
         disableConcurrentBuilds()
@@ -16,6 +15,7 @@ pipeline {
         PYTHON_REPO = "beny14/python_app"
         NGINX_REPO = "beny14/nginx_static"
     }
+    agent none
 
     stages {
         stage('Detect Environment and Choose Agent') {
