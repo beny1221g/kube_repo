@@ -46,13 +46,13 @@ pipeline {
                                   path: /var/run/docker.sock
                         ''') {
                             node(POD_LABEL) {
-                                runPipeline()
+                                runPipeline() // Call the function without additional node context
                             }
                         }
                     } else {
                         echo "Using EC2 fleet agent..."
                         node('ec2-fleet-bz2') {
-                            runPipeline()
+                            runPipeline() // Call the function without additional node context
                         }
                     }
                 }
@@ -79,21 +79,18 @@ pipeline {
 }
 
 def runPipeline() {
-    // Wrap the runPipeline function in a node context based on AGENT_TYPE
-    node(params.AGENT_TYPE == 'ec2' ? 'ec2-fleet-bz2' : POD_LABEL) {
-        stage('Checkout') {
-            git url: 'https://github.com/beny1221g/kube_repo.git', branch: 'main'
-        }
-
-        stage('Docker Login') {
-            withCredentials([usernamePassword(credentialsId: 'dockerhub_key', usernameVariable: 'USERNAME', passwordVariable: 'USERPASS')]) {
-                sh "echo ${USERPASS} | docker login -u ${USERNAME} --password-stdin"
-            }
-        }
-
-        buildDockerImage('Build Python App', PYTHON_REPO, 'app/Dockerfile', 'app')
-        buildDockerImage('Build Nginx Static Site', NGINX_REPO, 'NGINX/Dockerfile', 'NGINX')
+    stage('Checkout') {
+        git url: 'https://github.com/beny1221g/kube_repo.git', branch: 'main'
     }
+
+    stage('Docker Login') {
+        withCredentials([usernamePassword(credentialsId: 'dockerhub_key', usernameVariable: 'USERNAME', passwordVariable: 'USERPASS')]) {
+            sh "echo ${USERPASS} | docker login -u ${USERNAME} --password-stdin"
+        }
+    }
+
+    buildDockerImage('Build Python App', PYTHON_REPO, 'app/Dockerfile', 'app')
+    buildDockerImage('Build Nginx Static Site', NGINX_REPO, 'NGINX/Dockerfile', 'NGINX')
 }
 
 def buildDockerImage(String stageName, String repo, String dockerfile, String context) {
@@ -112,6 +109,7 @@ def buildDockerImage(String stageName, String repo, String dockerfile, String co
         }
     }
 }
+
 
 // pipeline {
 //     agent { label 'ec2-fleet-bz2' }
