@@ -1,5 +1,5 @@
 pipeline {
-    agent none
+
     options {
         buildDiscarder(logRotator(daysToKeepStr: '14'))
         disableConcurrentBuilds()
@@ -12,11 +12,12 @@ pipeline {
             description: 'Choose the agent to use: Kubernetes (k8s) or EC2'
         )
     }
+
     environment {
         PYTHON_REPO = "beny14/python_app"
         NGINX_REPO = "beny14/nginx_static"
     }
-
+    agent none
     stages {
         stage('Detect Environment and Choose Agent') {
             steps {
