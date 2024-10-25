@@ -19,6 +19,7 @@ pipeline {
     }
     agent none
     }
+
 //     stages {
 //         stage('Detect Environment and Choose Agent') {
 //             steps {
