@@ -74,7 +74,10 @@ pipeline {
 }
 
 def runPipeline() {
-    node {
+    agent {
+        label params.AGENT_TYPE == 'ec2' ? 'ec2-fleet-bz2' : 'k8s'
+
+
         stage('Checkout') {
             git url: 'https://github.com/beny1221g/kube_repo.git', branch: 'main'
         }
