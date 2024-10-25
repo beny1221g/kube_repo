@@ -5,6 +5,13 @@ pipeline {
         disableConcurrentBuilds()
         timeout(time: 40, unit: 'MINUTES')
     }
+    parameters {
+        choice(
+            name: 'AGENT_TYPE',
+            choices: ['k8s', 'ec2'],
+            description: 'Choose the agent to use: Kubernetes (k8s) or EC2'
+        )
+    }
     environment {
         PYTHON_REPO = "beny14/python_app"
         NGINX_REPO = "beny14/nginx_static"
