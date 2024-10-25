@@ -1,5 +1,5 @@
 pipeline {
-
+    agent none
     options {
         buildDiscarder(logRotator(daysToKeepStr: '14'))
         disableConcurrentBuilds()
@@ -12,12 +12,11 @@ pipeline {
             description: 'Choose the agent to use: Kubernetes (k8s) or EC2'
         )
     }
-
     environment {
         PYTHON_REPO = "beny14/python_app"
         NGINX_REPO = "beny14/nginx_static"
     }
-    agent none
+
     stages {
         stage('Detect Environment and Choose Agent') {
             steps {
@@ -75,29 +74,22 @@ pipeline {
 }
 
 def runPipeline() {
-        agent {label params.AGENT_TYPE == 'ec2' ? 'ec2-fleet-bz2' : 'k8s'}
+    stage('Checkout') {
+        git url: 'https://github.com/beny1221g/kube_repo.git', branch: 'main'
+    }
 
-
-        stage('Checkout') {
-            agent {label params.AGENT_TYPE == 'ec2' ? 'ec2-fleet-bz2' : 'k8s'}
-            git url: 'https://github.com/beny1221g/kube_repo.git', branch: 'main'
+    stage('Docker Login') {
+        withCredentials([usernamePassword(credentialsId: 'dockerhub_key', usernameVariable: 'USERNAME', passwordVariable: 'USERPASS')]) {
+            sh "echo ${USERPASS} | docker login -u ${USERNAME} --password-stdin"
         }
+    }
 
-        stage('Docker Login') {
-            agent {label params.AGENT_TYPE == 'ec2' ? 'ec2-fleet-bz2' : 'k8s'}
-            withCredentials([usernamePassword(credentialsId: 'dockerhub_key', usernameVariable: 'USERNAME', passwordVariable: 'USERPASS')]) {
-                sh "echo ${USERPASS} | docker login -u ${USERNAME} --password-stdin"
-            }
-        }
-
-        buildDockerImage('Build Python App', PYTHON_REPO, 'app/Dockerfile', 'app')
-        buildDockerImage('Build Nginx Static Site', NGINX_REPO, 'NGINX/Dockerfile', 'NGINX')
-
+    buildDockerImage('Build Python App', PYTHON_REPO, 'app/Dockerfile', 'app')
+    buildDockerImage('Build Nginx Static Site', NGINX_REPO, 'NGINX/Dockerfile', 'NGINX')
 }
 
 def buildDockerImage(String stageName, String repo, String dockerfile, String context) {
     stage(stageName) {
-        agent {label params.AGENT_TYPE == 'ec2' ? 'ec2-fleet-bz2' : 'k8s'}
         try {
             echo "Starting Docker build for ${stageName}"
             sh """
