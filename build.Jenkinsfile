@@ -74,18 +74,20 @@ pipeline {
 }
 
 def runPipeline() {
-    stage('Checkout') {
-        git url: 'https://github.com/beny1221g/kube_repo.git', branch: 'main'
-    }
-
-    stage('Docker Login') {
-        withCredentials([usernamePassword(credentialsId: 'dockerhub_key', usernameVariable: 'USERNAME', passwordVariable: 'USERPASS')]) {
-            sh "echo ${USERPASS} | docker login -u ${USERNAME} --password-stdin"
+    node {
+        stage('Checkout') {
+            git url: 'https://github.com/beny1221g/kube_repo.git', branch: 'main'
         }
-    }
 
-    buildDockerImage('Build Python App', PYTHON_REPO, 'app/Dockerfile', 'app')
-    buildDockerImage('Build Nginx Static Site', NGINX_REPO, 'NGINX/Dockerfile', 'NGINX')
+        stage('Docker Login') {
+            withCredentials([usernamePassword(credentialsId: 'dockerhub_key', usernameVariable: 'USERNAME', passwordVariable: 'USERPASS')]) {
+                sh "echo ${USERPASS} | docker login -u ${USERNAME} --password-stdin"
+            }
+        }
+
+        buildDockerImage('Build Python App', PYTHON_REPO, 'app/Dockerfile', 'app')
+        buildDockerImage('Build Nginx Static Site', NGINX_REPO, 'NGINX/Dockerfile', 'NGINX')
+    }
 }
 
 def buildDockerImage(String stageName, String repo, String dockerfile, String context) {
