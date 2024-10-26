@@ -25,7 +25,7 @@ pipeline {
                     echo "Checking environment and selecting agent..."
                     if (params.AGENT_TYPE == 'k8s') {
                         echo "Using Kubernetes agent..."
-                        podTemplate(yaml: '''
+                        podTemplate(label: POD_LABEL, yaml: '''
                             apiVersion: v1
                             kind: Pod
                             spec:
