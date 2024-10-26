@@ -16,7 +16,6 @@ pipeline {
         PYTHON_REPO = "beny14/python_app"
         NGINX_REPO = "beny14/nginx_static"
         POD_LABEL = "my-k8s-agent" // Define the POD_LABEL here
-        POD_NAME = "my-k8s-agent" // Define the POD_NAME here
     }
 
     stages {
@@ -26,21 +25,6 @@ pipeline {
                     echo "Checking environment and selecting agent..."
                     if (params.AGENT_TYPE == 'k8s') {
                         echo "Using Kubernetes agent..."
-
-                        // Check if the pod already exists
-                        def podExists = sh(script: "kubectl get pods -n bz-jenkins | grep ${POD_NAME} || true", returnStatus: true) == 0
-
-                        // Create the pod only if it doesn't exist
-                        if (!podExists) {
-                            echo "Pod ${POD_NAME} does not exist. Creating it..."
-                            sh """
-                                kubectl run ${POD_NAME} --image=beny14/dockerfile_agent:latest --restart=Never --labels=${POD_LABEL}=true --namespace=bz-jenkins
-                            """
-                        } else {
-                            echo "Pod ${POD_NAME} already exists. Using it..."
-                        }
-
-                        // Now run the pipeline using the created pod
                         podTemplate(label: POD_LABEL, yaml: '''
                             apiVersion: v1
                             kind: Pod
@@ -105,7 +89,26 @@ def runPipeline() {
         }
     }
 
-    buildDockerImage('Build Python App', PYTHON_REPO, 'app/Docke
+    buildDockerImage('Build Python App', PYTHON_REPO, 'app/Dockerfile', 'app')
+    buildDockerImage('Build Nginx Static Site', NGINX_REPO, 'NGINX/Dockerfile', 'NGINX')
+}
+
+def buildDockerImage(String stageName, String repo, String dockerfile, String context) {
+    stage(stageName) {
+        try {
+            echo "Starting Docker build for ${stageName}"
+            sh """
+                docker build -t ${repo}:${BUILD_NUMBER} -f ${dockerfile} ${context}
+                docker tag ${repo}:${BUILD_NUMBER} ${repo}:latest
+                docker push ${repo}:${BUILD_NUMBER}
+                docker push ${repo}:latest
+            """
+            echo "Docker build and push for ${stageName} completed"
+        } catch (Exception e) {
+            error "Build failed for ${stageName}: ${e.getMessage()}"
+        }
+    }
+}
 
 
 // pipeline {
