@@ -33,7 +33,7 @@ pipeline {
                               containers:
                               - name: jnlp
                                 image: jenkins/inbound-agent
-                                args: ['-url', '<your-jenkins-url>', 'JenkinsAgent']
+                                args: ['-url', 'http://k8s-bzjenkin-releasej-c663409355-6f66daf7dc73980b.elb.us-east-2.amazonaws.com:8080', 'JenkinsAgent']
                               - name: build
                                 image: beny14/dockerfile_agent:latest
                                 tty: true
