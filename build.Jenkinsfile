@@ -1,59 +1,48 @@
 pipeline {
-    agent none
+    agent { label 'ec2-fleet-bz2' }
+
     options {
         buildDiscarder(logRotator(daysToKeepStr: '14'))
         disableConcurrentBuilds()
         timeout(time: 40, unit: 'MINUTES')
     }
-    parameters {
-        choice(
-            name: 'AGENT_TYPE',
-            choices: ['k8s', 'ec2'],
-            description: 'Choose the agent to use: Kubernetes (k8s) or EC2'
-        )
-    }
+
     environment {
         PYTHON_REPO = "beny14/python_app"
         NGINX_REPO = "beny14/nginx_static"
-        POD_LABEL = "my-k8s-agent" // Define the POD_LABEL here
     }
 
     stages {
-        stage('Detect Environment and Choose Agent') {
+        stage('Checkout') {
             steps {
                 script {
-                    echo "Checking environment and selecting agent..."
-                    if (params.AGENT_TYPE == 'k8s') {
-                        echo "Using Kubernetes agent..."
-                        podTemplate(label: POD_LABEL, yaml: '''
-                            apiVersion: v1
-                            kind: Pod
-                            spec:
-                              serviceAccountName: jenkins
-                              containers:
-                              - name: jnlp
-                                image: jenkins/inbound-agent
-                                args: ['-url', 'http://k8s-bzjenkin-releasej-c663409355-6f66daf7dc73980b.elb.us-east-2.amazonaws.com:8080', 'my-k8s-agent']
-                              - name: build
-                                image: beny14/dockerfile_agent:latest
-                                tty: true
-                                volumeMounts:
-                                - name: docker-sock
-                                  mountPath: /var/run/docker.sock
-                              volumes:
-                              - name: docker-sock
-                                hostPath:
-                                  path: /var/run/docker.sock
-                        ''') {
-                            node(POD_LABEL) {
-                                runPipeline() // Call the function without additional node context
-                            }
-                        }
-                    } else {
-                        echo "Using EC2 fleet agent..."
-                        node('ec2-fleet-bz2') {
-                            runPipeline() // Call the function without additional node context
-                        }
+                    echo "Checking out code from Git..."
+                    git url: 'https://github.com/beny1221g/kube_repo.git', branch: 'main'
+                }
+            }
+        }
+
+        stage('Docker Login') {
+            steps {
+                script {
+                    withCredentials([usernamePassword(credentialsId: 'dockerhub_key', usernameVariable: 'USERNAME', passwordVariable: 'USERPASS')]) {
+                        echo "Logging in to Docker Hub..."
+                        sh "echo ${USERPASS} | docker login -u ${USERNAME} --password-stdin"
+                    }
+                }
+            }
+        }
+
+        stage('Build Docker Images') {
+            parallel {
+                stage('Build Python App') {
+                    steps {
+                        buildDockerImage('Build Python App', PYTHON_REPO, 'app/Dockerfile', 'app')
+                    }
+                }
+                stage('Build Nginx Static Site') {
+                    steps {
+                        buildDockerImage('Build Nginx Static Site', NGINX_REPO, 'NGINX/Dockerfile', 'NGINX')
                     }
                 }
             }
@@ -64,11 +53,8 @@ pipeline {
         always {
             script {
                 echo "Cleaning up Docker containers and images"
-                def cleanupNode = params.AGENT_TYPE == 'ec2' ? 'ec2-fleet-bz2' : POD_LABEL
-                node(cleanupNode) {
-                    sh "docker system prune -f --volumes || true"
-                    cleanWs()
-                }
+                sh "docker system prune -f --volumes || true"
+                cleanWs()
                 echo "Cleanup completed"
             }
         }
@@ -76,21 +62,6 @@ pipeline {
             echo "Build failed: ${currentBuild.description}"
         }
     }
-}
-
-def runPipeline() {
-    stage('Checkout') {
-        git url: 'https://github.com/beny1221g/kube_repo.git', branch: 'main'
-    }
-
-    stage('Docker Login') {
-        withCredentials([usernamePassword(credentialsId: 'dockerhub_key', usernameVariable: 'USERNAME', passwordVariable: 'USERPASS')]) {
-            sh "echo ${USERPASS} | docker login -u ${USERNAME} --password-stdin"
-        }
-    }
-
-    buildDockerImage('Build Python App', PYTHON_REPO, 'app/Dockerfile', 'app')
-    buildDockerImage('Build Nginx Static Site', NGINX_REPO, 'NGINX/Dockerfile', 'NGINX')
 }
 
 def buildDockerImage(String stageName, String repo, String dockerfile, String context) {
