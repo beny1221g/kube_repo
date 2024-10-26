@@ -10,7 +10,6 @@ pipeline {
     environment {
         PYTHON_REPO = "beny14/python_app"
         NGINX_REPO = "beny14/nginx_static"
-        AGENT_REPO = "beny14/dockerfile_agent" // Define agent repo
     }
 
     stages {
@@ -44,19 +43,6 @@ pipeline {
                 stage('Build Nginx Static Site') {
                     steps {
                         buildDockerImage('Build Nginx Static Site', NGINX_REPO, 'NGINX/Dockerfile', 'NGINX')
-                    }
-                }
-                stage('Build Agent Image') {  // New stage to build and push agent image
-                    steps {
-                        script {
-                            echo "Building and pushing Docker agent image..."
-                            sh """
-                                docker build -t ${AGENT_REPO}:${BUILD_NUMBER} -f Dockerfile_agent .
-                                docker tag ${AGENT_REPO}:${BUILD_NUMBER} ${AGENT_REPO}:latest
-                                docker push ${AGENT_REPO}:${BUILD_NUMBER}
-                                docker push ${AGENT_REPO}:latest
-                            """
-                        }
                     }
                 }
             }
@@ -94,7 +80,6 @@ def buildDockerImage(String stageName, String repo, String dockerfile, String co
         }
     }
 }
-
 
 
 // pipeline {
