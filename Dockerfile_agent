@@ -1,15 +1,18 @@
-# Stage 1: Installer for AWS CLI and Snyk
+# Stage 1: Installer for AWS CLI, Snyk, and kubectl
 FROM amazonlinux:2 as installer
 
-# Install AWS CLI and Snyk
+# Install AWS CLI and Snyk, and kubectl
 RUN yum update -y \
-    && yum install -y unzip \
+    && yum install -y unzip curl \
     && curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip" \
     && unzip awscliv2.zip \
     && ./aws/install --bin-dir /aws-cli-bin/ \
     && mkdir /snyk && cd /snyk \
     && curl https://static.snyk.io/cli/v1.666.0/snyk-linux -o snyk \
-    && chmod +x ./snyk
+    && chmod +x ./snyk \
+    && curl -LO "https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl" \
+    && chmod +x ./kubectl \
+    && mv ./kubectl /usr/local/bin/kubectl
 
 # Stage 2: Jenkins Agent Base
 FROM jenkins/inbound-agent:4.10-3-jdk11
@@ -17,11 +20,11 @@ FROM jenkins/inbound-agent:4.10-3-jdk11
 # Switch to root user for directory creation and copying files
 USER root
 
-# Copy over AWS CLI and Snyk tools from the installer stage
+# Copy over AWS CLI, Snyk, and kubectl from the installer stage
 COPY --from=installer /usr/local/aws-cli/ /usr/local/aws-cli/
 COPY --from=installer /aws-cli-bin/ /usr/local/bin/
 COPY --from=installer /snyk/ /usr/local/bin/
-COPY --from=installer /snyk/ /usr/bin/
+COPY --from=installer /usr/local/bin/kubectl /usr/local/bin/kubectl  # Copy kubectl
 
 # Create necessary directories with root privileges
 RUN mkdir -p /k8s/jenkins
