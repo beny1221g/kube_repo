@@ -1,6 +1,6 @@
 # Stage 1: Installer for AWS CLI, Snyk, and kubectl
 FROM amazonlinux:2 as installer
-
+USER root
 # Install AWS CLI, Snyk, and kubectl
 RUN yum update -y \
     && yum install -y unzip curl \
@@ -18,13 +18,13 @@ RUN yum update -y \
 FROM jenkins/inbound-agent:4.10-3-jdk11
 
 # Switch to root user for directory creation and copying files
-USER root
+
 
 # Copy over AWS CLI, Snyk, and kubectl from the installer stage
 COPY --from=installer /usr/local/aws-cli/ /usr/local/aws-cli/
 COPY --from=installer /aws-cli-bin/ /usr/local/bin/
 COPY --from=installer /snyk/ /usr/local/bin/
-COPY --from=installer /usr/local/bin/kubectl /usr/local/bin/  # Copy kubectl
+COPY --from=installer /usr/local/bin/kubectl /usr/local/bin/
 
 # Create necessary directories with root privileges
 RUN mkdir -p /k8s/jenkins
