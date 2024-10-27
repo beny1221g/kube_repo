@@ -61,7 +61,7 @@ pipeline {
                     $class: 'AmazonWebServicesCredentialsBinding',
                     accessKeyVariable: 'AWS_ACCESS_KEY_ID',
                     secretKeyVariable: 'AWS_SECRET_ACCESS_KEY',
-                    credentialsId: 'AKIAQKZU7TPQQFLDT2NS'
+                    credentialsId: 'aws_cred'
                 ]]) {
                     script {
                         sh """
@@ -85,7 +85,7 @@ pipeline {
                 $class: 'AmazonWebServicesCredentialsBinding',
                 accessKeyVariable: 'AWS_ACCESS_KEY_ID',
                 secretKeyVariable: 'AWS_SECRET_ACCESS_KEY',
-                credentialsId: 'AKIAQKZU7TPQQFLDT2NS'
+                credentialsId: 'aws_cred'
             ]]) {
                 sh """
                     aws sns publish --region ${env.aws_region} --topic-arn ${env.sns_topic_arn} \\
@@ -99,7 +99,7 @@ pipeline {
                 $class: 'AmazonWebServicesCredentialsBinding',
                 accessKeyVariable: 'AWS_ACCESS_KEY_ID',
                 secretKeyVariable: 'AWS_SECRET_ACCESS_KEY',
-                credentialsId: 'AKIAQKZU7TPQQFLDT2NS'
+                credentialsId: 'aws_cred'
             ]]) {
                 sh """
                     aws sns publish --region ${env.aws_region} --topic-arn ${env.sns_topic_arn} \\
