@@ -111,13 +111,18 @@ pipeline {
         always {
             script {
                 sh """
-                    docker ps -q -f ancestor=${DOCKER_REGISTRY}:${BUILD_NUMBER} | xargs -r docker stop
-                    docker ps -a -q -f ancestor=${DOCKER_REGISTRY}:${BUILD_NUMBER} | xargs -r docker rm -f
+                    docker ps -q -f ancestor=${DOCKER_REGISTRY_N}:${BUILD_NUMBER} | xargs -r docker stop
+                    docker ps -a -q -f ancestor=${DOCKER_REGISTRY_N}:${BUILD_NUMBER} | xargs -r docker rm -f
+
+                    docker ps -q -f ancestor=${DOCKER_REGISTRY_P}:${BUILD_NUMBER} | xargs -r docker stop
+                    docker ps -a -q -f ancestor=${DOCKER_REGISTRY_P}:${BUILD_NUMBER} | xargs -r docker rm -f
                 """
 
                 // Remove images related to this build except the latest
                 sh """
-                    docker images --format '{{.Repository}}:{{.Tag}} {{.ID}}' | grep '${DOCKER_REGISTRY}' | grep -v ':latest' | grep -v ':${BUILD_NUMBER}' | awk '{print \$2}' | xargs -r docker rmi -f
+                    docker images --format '{{.Repository}}:{{.Tag}} {{.ID}}' | grep '${DOCKER_REGISTRY_N}' | grep -v ':latest' | grep -v ':${BUILD_NUMBER}' | awk '{print \$2}' | xargs -r docker rmi -f
+                    docker images --format '{{.Repository}}:{{.Tag}} {{.ID}}' | grep '${DOCKER_REGISTRY_P}' | grep -v ':latest' | grep -v ':${BUILD_NUMBER}' | awk '{print \$2}' | xargs -r docker rmi -f
+
                 """
 
                 // Clean workspace
