@@ -43,7 +43,7 @@ pipeline {
             }
         }
 
-        stage('Verify Docker Image' N) {
+        stage('Verify Docker Image N') {
             steps {
                 script {
                     sh "docker images ${IMG_NAME_N}"
