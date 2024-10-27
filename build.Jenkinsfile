@@ -1,7 +1,7 @@
 pipeline {
     agent { label 'ec2-fleet-bz2' }
 
-     environment {
+    environment {
         image_tag_p = "python_app:${BUILD_NUMBER}"
         image_tag_n = "nginx_static:${BUILD_NUMBER}"
         IMG_NAME_P = "beny14/python_app:${BUILD_NUMBER}"
@@ -33,11 +33,11 @@ pipeline {
                 }
             }
         }
+
         stage('Push Docker Image N') {
             steps {
                 script {
                     sh "docker tag ${IMG_NAME_N} ${DOCKER_REGISTRY_N}:${BUILD_NUMBER}"
-
                     sh "docker push ${DOCKER_REGISTRY_N}:${BUILD_NUMBER}"
                 }
             }
@@ -55,7 +55,6 @@ pipeline {
             steps {
                 script {
                     sh "docker tag ${IMG_NAME_P} ${DOCKER_REGISTRY_P}:${BUILD_NUMBER}"
-
                     sh "docker push ${DOCKER_REGISTRY_P}:${BUILD_NUMBER}"
                 }
             }
@@ -71,7 +70,7 @@ pipeline {
 
         stage('Push to Amazon ECR') {
             steps {
-                withCredentials([[
+                withCredentials([[ // AWS credentials
                     $class: 'AmazonWebServicesCredentialsBinding',
                     accessKeyVariable: 'AWS_ACCESS_KEY_ID',
                     secretKeyVariable: 'AWS_SECRET_ACCESS_KEY',
@@ -80,11 +79,8 @@ pipeline {
                     script {
                         sh """
                             aws ecr get-login-password --region ${env.aws_region} | docker login --username AWS --password-stdin ${env.ecr_registry}
-
-
-                            docker tag ${env.image_tag_n} ${env.ecr_repo}:${BUILD_NUMBER}
-                            docker tag ${env.image_tag_p} ${env.ecr_repo}:${BUILD_NUMBER}
-
+                            docker tag ${IMG_NAME_N} ${env.ecr_repo}:${BUILD_NUMBER}
+                            docker tag ${IMG_NAME_P} ${env.ecr_repo}:${BUILD_NUMBER}
                             docker push ${env.ecr_repo}:${BUILD_NUMBER}
                         """
                     }
@@ -136,7 +132,6 @@ pipeline {
                 sh """
                     docker images --format '{{.Repository}}:{{.Tag}} {{.ID}}' | grep '${DOCKER_REGISTRY_N}' | grep -v ':latest' | grep -v ':${BUILD_NUMBER}' | awk '{print \$2}' | xargs -r docker rmi -f
                     docker images --format '{{.Repository}}:{{.Tag}} {{.ID}}' | grep '${DOCKER_REGISTRY_P}' | grep -v ':latest' | grep -v ':${BUILD_NUMBER}' | awk '{print \$2}' | xargs -r docker rmi -f
-
                 """
 
                 // Clean workspace
@@ -144,8 +139,4 @@ pipeline {
             }
         }
     }
-
-
 }
-
-
