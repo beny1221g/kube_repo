@@ -37,8 +37,8 @@ pipeline {
         stage('Push Docker Image') {
             steps {
                 script {
-                    sh "docker tag ${IMG_NAME} ${DOCKER_REGISTRY_N}:${BUILD_NUMBER}"
-                    sh "docker tag ${IMG_NAME} ${DOCKER_REGISTRY_P}:${BUILD_NUMBER}"
+                    sh "docker tag ${IMG_NAME_N} ${DOCKER_REGISTRY_N}:${BUILD_NUMBER}"
+                    sh "docker tag ${IMG_NAME_P} ${DOCKER_REGISTRY_P}:${BUILD_NUMBER}"
 
                     sh "docker push ${DOCKER_REGISTRY_N}:${BUILD_NUMBER}"
                     sh "docker push ${DOCKER_REGISTRY_P}:${BUILD_NUMBER}"
@@ -68,8 +68,8 @@ pipeline {
                             aws ecr get-login-password --region ${env.aws_region} | docker login --username AWS --password-stdin ${env.ecr_registry}
 
 
-                            docker tag ${env.image_tag} ${env.ecr_repo}:${BUILD_NUMBER}
-
+                            docker tag ${env.image_tag_n} ${env.ecr_repo}:${BUILD_NUMBER}
+                            docker tag ${env.image_tag_p} ${env.ecr_repo}:${BUILD_NUMBER}
 
                             docker push ${env.ecr_repo}:${BUILD_NUMBER}
                         """
