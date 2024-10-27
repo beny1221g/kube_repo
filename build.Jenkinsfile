@@ -38,9 +38,9 @@ pipeline {
             steps {
                 script {
                     sh "docker tag ${IMG_NAME} ${DOCKER_REGISTRY_N}:${BUILD_NUMBER}"
-                    sh "docker push ${DOCKER_REGISTRY_N}:${BUILD_NUMBER}"
-
                     sh "docker tag ${IMG_NAME} ${DOCKER_REGISTRY_P}:${BUILD_NUMBER}"
+
+                    sh "docker push ${DOCKER_REGISTRY_N}:${BUILD_NUMBER}"
                     sh "docker push ${DOCKER_REGISTRY_P}:${BUILD_NUMBER}"
                 }
             }
