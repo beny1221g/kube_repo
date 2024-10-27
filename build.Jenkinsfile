@@ -33,7 +33,7 @@ pipeline {
                 }
             }
         }
-        stage('Push Docker Image') {
+        stage('Push Docker Image N') {
             steps {
                 script {
                     sh "docker tag ${IMG_NAME_N} ${DOCKER_REGISTRY_N}:${BUILD_NUMBER}"
@@ -43,7 +43,7 @@ pipeline {
             }
         }
 
-        stage('Verify Docker Image') {
+        stage('Verify Docker Image' N) {
             steps {
                 script {
                     sh "docker images ${IMG_NAME_N}"
@@ -51,7 +51,7 @@ pipeline {
             }
         }
 
-        stage('Push Docker Image') {
+        stage('Push Docker Image P') {
             steps {
                 script {
                     sh "docker tag ${IMG_NAME_P} ${DOCKER_REGISTRY_P}:${BUILD_NUMBER}"
@@ -61,7 +61,7 @@ pipeline {
             }
         }
 
-        stage('Verify Docker Image') {
+        stage('Verify Docker Image P') {
             steps {
                 script {
                     sh "docker images ${IMG_NAME_P}"
