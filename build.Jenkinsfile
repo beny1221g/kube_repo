@@ -3,16 +3,14 @@ pipeline {
 
     environment {
         image_tag_p = "python_app:${BUILD_NUMBER}"
-        image_tag_p_latest = "python_app:latest"
         image_tag_n = "nginx_static:${BUILD_NUMBER}"
-        image_tag_n_latest = "nginx_static:latest"
         IMG_NAME_P = "beny14/python_app:${BUILD_NUMBER}"
         IMG_NAME_N = "beny14/nginx_static:${BUILD_NUMBER}"
         DOCKER_REGISTRY_N = "beny14/nginx_static"
         DOCKER_REGISTRY_P = "beny14/python_app"
         ecr_registry = "023196572641.dkr.ecr.us-east-2.amazonaws.com"
-        ecr_repo_p = "${ecr_registry}/beny14/python_app"
         ecr_repo_n = "${ecr_registry}/beny14/nginx_static"
+        ecr_repo_p = "${ecr_registry}/beny14/python_app"
         aws_region = "us-east-2"
         sns_topic_arn = "arn:aws:sns:us-east-2:023196572641:bz_topic"
     }
@@ -22,41 +20,44 @@ pipeline {
             steps {
                 withCredentials([usernamePassword(credentialsId: 'dockerhub_key', usernameVariable: 'USERNAME', passwordVariable: 'USERPASS')]) {
                     script {
-                        try {
-                            dir('app') {
-                                sh "docker login -u ${USERNAME} -p ${USERPASS}"
-                                // Build Python app image
-                                sh "docker build -t ${IMG_NAME_P} -t ${DOCKER_REGISTRY_P}:latest ."
-                                // Build NGINX image
-                                sh "docker build -t ${IMG_NAME_N} -t ${DOCKER_REGISTRY_N}:latest ."
-                            }
-                        } catch (Exception e) {
-                            echo "Docker build failed: ${e.message}"
-                            error "Build failed: ${e.message}"
+                        dir('app') {
+                            echo "Building Docker images for NGINX and Python App..."
+                            sh """
+                                docker login -u ${USERNAME} -p ${USERPASS}
+                                docker build -t ${IMG_NAME_P} .
+                                docker build -t ${IMG_NAME_N} .
+                            """
                         }
                     }
                 }
             }
         }
 
-        stage('Push Docker Images to DockerHub') {
+        stage('Push NGINX Image to DockerHub') {
             steps {
                 script {
-                    // Push Python app image
+                    echo "Pushing NGINX image to DockerHub..."
                     sh """
-                        docker push ${IMG_NAME_P}
-                        docker push ${DOCKER_REGISTRY_P}:latest
-                    """
-                    // Push NGINX image
-                    sh """
-                        docker push ${IMG_NAME_N}
-                        docker push ${DOCKER_REGISTRY_N}:latest
+                        docker tag ${IMG_NAME_N} ${DOCKER_REGISTRY_N}:${BUILD_NUMBER}
+                        docker push ${DOCKER_REGISTRY_N}:${BUILD_NUMBER}
                     """
                 }
             }
         }
 
-        stage('Push Docker Images to Amazon ECR') {
+        stage('Push Python App Image to DockerHub') {
+            steps {
+                script {
+                    echo "Pushing Python App image to DockerHub..."
+                    sh """
+                        docker tag ${IMG_NAME_P} ${DOCKER_REGISTRY_P}:${BUILD_NUMBER}
+                        docker push ${DOCKER_REGISTRY_P}:${BUILD_NUMBER}
+                    """
+                }
+            }
+        }
+
+        stage('Push Images to Amazon ECR') {
             steps {
                 withCredentials([[
                     $class: 'AmazonWebServicesCredentialsBinding',
@@ -65,33 +66,15 @@ pipeline {
                     credentialsId: 'aws'
                 ]]) {
                     script {
+                        echo "Pushing images to Amazon ECR..."
                         sh """
-                            aws ecr get-login-password --region ${env.aws_region} | docker login --username AWS --password-stdin ${env.ecr_registry}
-                            # Tag and push Python app image
-                            docker tag ${IMG_NAME_P} ${ecr_repo_p}:${BUILD_NUMBER}
-                            docker tag ${DOCKER_REGISTRY_P}:latest ${ecr_repo_p}:latest
-                            docker push ${ecr_repo_p}:${BUILD_NUMBER}
-                            docker push ${ecr_repo_p}:latest
-                            # Tag and push NGINX image
+                            aws ecr get-login-password --region ${aws_region} | docker login --username AWS --password-stdin ${ecr_registry}
                             docker tag ${IMG_NAME_N} ${ecr_repo_n}:${BUILD_NUMBER}
-                            docker tag ${DOCKER_REGISTRY_N}:latest ${ecr_repo_n}:latest
+                            docker tag ${IMG_NAME_P} ${ecr_repo_p}:${BUILD_NUMBER}
                             docker push ${ecr_repo_n}:${BUILD_NUMBER}
-                            docker push ${ecr_repo_n}:latest
+                            docker push ${ecr_repo_p}:${BUILD_NUMBER}
                         """
                     }
-                }
-            }
-        }
-
-        stage('Verify Docker Images') {
-            steps {
-                script {
-                    // Verify Python app image
-                    sh "docker images ${IMG_NAME_P}"
-                    sh "docker images ${DOCKER_REGISTRY_P}:latest"
-                    // Verify NGINX image
-                    sh "docker images ${IMG_NAME_N}"
-                    sh "docker images ${DOCKER_REGISTRY_N}:latest"
                 }
             }
         }
@@ -99,6 +82,7 @@ pipeline {
 
     post {
         success {
+            echo "Pipeline succeeded, sending success notification..."
             withCredentials([[
                 $class: 'AmazonWebServicesCredentialsBinding',
                 accessKeyVariable: 'AWS_ACCESS_KEY_ID',
@@ -106,13 +90,14 @@ pipeline {
                 credentialsId: 'aws'
             ]]) {
                 sh """
-                    aws sns publish --region ${env.aws_region} --topic-arn ${env.sns_topic_arn} \\
-                        --message "Pipeline succeeded for build #${env.BUILD_NUMBER} on ${env.JOB_NAME}" \\
+                    aws sns publish --region ${aws_region} --topic-arn ${sns_topic_arn} \
+                        --message "Pipeline succeeded for build #${BUILD_NUMBER} on ${JOB_NAME}" \
                         --subject "Jenkins Pipeline Success Notification"
                 """
             }
         }
         failure {
+            echo "Pipeline failed, sending failure notification..."
             withCredentials([[
                 $class: 'AmazonWebServicesCredentialsBinding',
                 accessKeyVariable: 'AWS_ACCESS_KEY_ID',
@@ -120,23 +105,25 @@ pipeline {
                 credentialsId: 'aws'
             ]]) {
                 sh """
-                    aws sns publish --region ${env.aws_region} --topic-arn ${env.sns_topic_arn} \\
-                        --message "Pipeline failed for build #${env.BUILD_NUMBER} on ${env.JOB_NAME}" \\
+                    aws sns publish --region ${aws_region} --topic-arn ${sns_topic_arn} \
+                        --message "Pipeline failed for build #${BUILD_NUMBER} on ${JOB_NAME}" \
                         --subject "Jenkins Pipeline Failure Notification"
                 """
             }
         }
         always {
             script {
+                echo "Performing cleanup tasks..."
                 sh """
-                    # Stop and remove containers related to the current build
+                    # Stop and remove containers for NGINX
                     docker ps -q -f ancestor=${DOCKER_REGISTRY_N}:${BUILD_NUMBER} | xargs -r docker stop
                     docker ps -a -q -f ancestor=${DOCKER_REGISTRY_N}:${BUILD_NUMBER} | xargs -r docker rm -f
 
+                    # Stop and remove containers for Python App
                     docker ps -q -f ancestor=${DOCKER_REGISTRY_P}:${BUILD_NUMBER} | xargs -r docker stop
                     docker ps -a -q -f ancestor=${DOCKER_REGISTRY_P}:${BUILD_NUMBER} | xargs -r docker rm -f
 
-                    # Remove unused images except latest and current BUILD_NUMBER
+                    # Remove old images for both applications
                     docker images --format '{{.Repository}}:{{.Tag}} {{.ID}}' | grep '${DOCKER_REGISTRY_N}' | grep -v ':latest' | grep -v ':${BUILD_NUMBER}' | awk '{print \$2}' | xargs -r docker rmi -f
                     docker images --format '{{.Repository}}:{{.Tag}} {{.ID}}' | grep '${DOCKER_REGISTRY_P}' | grep -v ':latest' | grep -v ':${BUILD_NUMBER}' | awk '{print \$2}' | xargs -r docker rmi -f
                 """
