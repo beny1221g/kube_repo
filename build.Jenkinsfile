@@ -39,7 +39,9 @@ pipeline {
                     echo "Pushing NGINX image to DockerHub..."
                     sh """
                         docker tag ${IMG_NAME_N} ${DOCKER_REGISTRY_N}:${BUILD_NUMBER}
+                        docker tag ${IMG_NAME_N} ${DOCKER_REGISTRY_N}:latest
                         docker push ${DOCKER_REGISTRY_N}:${BUILD_NUMBER}
+                        docker push ${DOCKER_REGISTRY_N}:latest
                     """
                 }
             }
@@ -51,7 +53,9 @@ pipeline {
                     echo "Pushing Python App image to DockerHub..."
                     sh """
                         docker tag ${IMG_NAME_P} ${DOCKER_REGISTRY_P}:${BUILD_NUMBER}
+                        docker tag ${IMG_NAME_P} ${DOCKER_REGISTRY_P}:latest
                         docker push ${DOCKER_REGISTRY_P}:${BUILD_NUMBER}
+                        docker push ${DOCKER_REGISTRY_P}:latest
                     """
                 }
             }
